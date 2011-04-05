@@ -29,23 +29,92 @@ module Hydra
         
         def wrap(params = {})
           error = false
-          hydra_server = self.configure(params)
+          jetty_server = self.instance
+          jetty_server.quiet = params[:quiet] || true
+          jetty_server.jetty_home = params[:jetty_home]
+          jetty_server.solr_home = params[:solr_home]
+          jetty_server.port = params[:jetty_port] || 8888
           begin
-            puts "starting Hydra jetty server on #{RUBY_PLATFORM}"
-            hydra_server.start
+            # puts "starting jetty on #{RUBY_PLATFORM}"
+            jetty_server.start
             sleep params[:startup_wait] || 5
             yield
           rescue
-            error = true
+            error = $!
+            puts "*** Error starting hydra-jetty: #{error}"
           ensure
-            puts "stopping Hydra jetty server"
-            hydra_server.stop
+            # puts "stopping jetty server"
+            jetty_server.stop
           end
 
           return error
         end
         
       end #end of class << self
+      
+      def jetty_command
+        "java -Djetty.port=#{@port} -Dsolr.solr.home=#{@solr_home} -jar start.jar"
+      end
+
+      def start
+        puts "jetty_home: #{@jetty_home}"
+        puts "solr_home: #{@solr_home}"
+        puts "jetty_command: #{jetty_command}"
+        platform_specific_start
+      end
+
+      def stop
+        platform_specific_stop
+      end
+
+      if RUBY_PLATFORM =~ /mswin32/
+        require 'win32/process'
+
+        # start the solr server
+        def platform_specific_start
+          Dir.chdir(@jetty_home) do
+            @pid = Process.create(
+                  :app_name         => jetty_command,
+                  :creation_flags   => Process::DETACHED_PROCESS,
+                  :process_inherit  => false,
+                  :thread_inherit   => true,
+                  :cwd              => "#{@jetty_home}"
+               ).process_id
+          end
+        end
+
+        # stop a running solr server
+        def platform_specific_stop
+          Process.kill(1, @pid)
+          Process.wait
+        end
+      else # Not Windows
+
+        def jruby_raise_error?
+          raise 'JRuby requires that you start solr manually, then run "rake spec" or "rake features"' if defined?(JRUBY_VERSION)
+        end
+
+        # start the solr server
+        def platform_specific_start
+
+          jruby_raise_error?
+
+          puts self.inspect
+          Dir.chdir(@jetty_home) do
+            @pid = fork do
+              STDERR.close if @quiet
+              exec jetty_command
+            end
+          end
+        end
+
+        # stop a running solr server
+        def platform_specific_stop
+          jruby_raise_error?
+          Process.kill('TERM', @pid)
+          Process.wait
+        end
+      end
 
     end
   end
