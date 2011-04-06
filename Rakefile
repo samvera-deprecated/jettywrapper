@@ -1,6 +1,7 @@
 require 'rake'
 require 'bundler'
 require 'spec/rake/spectask'
+require 'yard'
 
 Bundler::GemHelper.install_tasks
 Dir.glob('lib/tasks/*.rake').each { |r| import r }
@@ -29,6 +30,11 @@ end
 task :clean do
   puts 'Cleaning old coverage.data'
   FileUtils.rm('coverage.data') if(File.exists? 'coverage.data')
+end
+
+YARD::Rake::YardocTask.new(:doc) do |t|
+  t.files   = ['lib/**/*.rb']   # optional
+  # t.options = ['--any', '--extra', '--opts'] # optional
 end
 
 task :default => [:rcov, :doc]

@@ -33,6 +33,7 @@ Gem::Specification.new do |s|
   s.add_development_dependency 'cucumber-rails'
   s.add_development_dependency 'gherkin'
   s.add_development_dependency 'rcov'
+  s.add_development_dependency 'yard'
   
 end
 

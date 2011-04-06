@@ -5,3 +5,5 @@ pkg/*
 coverage
 coverage.data
 *~
+.yardoc
+doc
