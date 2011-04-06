@@ -81,6 +81,16 @@ module Hydra
           error.should eql(false)
         end
         
+        it "captures any errors produced" do
+          Hydra::Testing::TestServer.any_instance.stubs(:start).returns(true)
+          Hydra::Testing::TestServer.any_instance.stubs(:stop).returns(true)
+          error = Hydra::Testing::TestServer.wrap(@jetty_params) do 
+            raise "foo"
+          end
+          error.class.should eql(RuntimeError)
+          error.message.should eql("foo")
+        end
+        
       end
       
     end
