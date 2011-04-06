@@ -36,6 +36,7 @@ module Hydra
           jetty_server.solr_home = params[:solr_home]
           jetty_server.port = params[:jetty_port] || 8888
           jetty_server.startup_wait = params[:startup_wait] || 5
+          jetty_server.fedora_home = params[:fedora_home] || File.join( jetty_server.jetty_home, "fedora","default")
           
           begin
             # puts "starting jetty on #{RUBY_PLATFORM}"

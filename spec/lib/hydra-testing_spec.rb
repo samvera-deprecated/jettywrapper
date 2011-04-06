@@ -10,9 +10,9 @@ module Hydra
           :quiet => false,
           :jetty_home => "/path/to/jetty",
           :jetty_port => 8888,
-          :solr_home => '/path/to/solr',
-          :fedora_home => '/path/to/fedora',
-          :startup_wait => 10
+          :solr_home => "/path/to/solr",
+          :fedora_home => "/path/to/fedora",
+          :startup_wait => 0
         }
       end
       
@@ -29,7 +29,7 @@ module Hydra
           ts.port.should == 8888
           ts.solr_home.should == '/path/to/solr'
           ts.fedora_home.should == '/path/to/fedora'
-          ts.startup_wait.should == 10
+          ts.startup_wait.should == 0
         end
 
         # passing in a hash is no longer optional
@@ -43,7 +43,8 @@ module Hydra
             :jetty_home => '/path/to/jetty',
             :jetty_port => nil,
             :solr_home => nil,
-            :fedora_home => nil
+            :fedora_home => nil,
+            :startup_wait => nil
           }
 
           ts = Hydra::Testing::TestServer.configure(jetty_params) 
@@ -52,6 +53,7 @@ module Hydra
           ts.port.should == 8888
           ts.solr_home.should == File.join(ts.jetty_home, "solr")
           ts.fedora_home.should == File.join(ts.jetty_home, "fedora","default")
+          ts.startup_wait.should == 5
         end
       end # end of instantiation context
       
@@ -60,6 +62,21 @@ module Hydra
           Hydra::Testing::TestServer.any_instance.stubs(:start).returns(true)
           Hydra::Testing::TestServer.any_instance.stubs(:stop).returns(true)
           error = Hydra::Testing::TestServer.wrap(@jetty_params) do            
+          end
+          error.should eql(false)
+        end
+        
+        it "configures itself correctly when invoked via the wrap method" do
+          Hydra::Testing::TestServer.any_instance.stubs(:start).returns(true)
+          Hydra::Testing::TestServer.any_instance.stubs(:stop).returns(true)
+          error = Hydra::Testing::TestServer.wrap(@jetty_params) do 
+            ts = Hydra::Testing::TestServer.instance 
+            ts.quiet.should == true
+            ts.jetty_home.should == "/path/to/jetty"
+            ts.port.should == 8888
+            ts.solr_home.should == "/path/to/solr"
+            ts.fedora_home.should == "/path/to/fedora"
+            ts.startup_wait.should == 0     
           end
           error.should eql(false)
         end
