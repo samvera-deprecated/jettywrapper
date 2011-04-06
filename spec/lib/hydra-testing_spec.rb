@@ -11,7 +11,8 @@ module Hydra
           :jetty_home => "/path/to/jetty",
           :jetty_port => 8888,
           :solr_home => '/path/to/solr',
-          :fedora_home => '/path/to/fedora'
+          :fedora_home => '/path/to/fedora',
+          :startup_wait => 10
         }
       end
       
@@ -28,6 +29,7 @@ module Hydra
           ts.port.should == 8888
           ts.solr_home.should == '/path/to/solr'
           ts.fedora_home.should == '/path/to/fedora'
+          ts.startup_wait.should == 10
         end
 
         # passing in a hash is no longer optional

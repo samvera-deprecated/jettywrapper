@@ -4,8 +4,8 @@ module Hydra
 
       require 'singleton'
       include Singleton
-      attr_accessor :port, :jetty_home, :solr_home, :quiet, :fedora_home
-
+      attr_accessor :port, :jetty_home, :solr_home, :quiet, :fedora_home, :startup_wait      
+      
       # configure the singleton with some defaults
       def initialize
         @pid = nil
@@ -24,6 +24,7 @@ module Hydra
           hydra_server.solr_home = params[:solr_home]  || File.join( hydra_server.jetty_home, "solr")
           hydra_server.fedora_home = params[:fedora_home] || File.join( hydra_server.jetty_home, "fedora","default")
           hydra_server.port = params[:jetty_port] || 8888
+          hydra_server.startup_wait = params[:startup_wait] || 5
           return hydra_server
         end
         
@@ -34,10 +35,12 @@ module Hydra
           jetty_server.jetty_home = params[:jetty_home]
           jetty_server.solr_home = params[:solr_home]
           jetty_server.port = params[:jetty_port] || 8888
+          jetty_server.startup_wait = params[:startup_wait] || 5
+          
           begin
             # puts "starting jetty on #{RUBY_PLATFORM}"
             jetty_server.start
-            sleep params[:startup_wait] || 5
+            sleep jetty_server.startup_wait
             yield
           rescue
             error = $!
