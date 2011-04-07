@@ -5,6 +5,7 @@ This gem is designed to make it easier to run automated tests against jetty. Sol
 h2. Instructions for the impatient:
 
 bc.. 
+  require 'hydra-testing'
   desc "New way of running tests"
   task :newtest do
     Rake::Task["rake:db:test:clone_structure"].invoke
