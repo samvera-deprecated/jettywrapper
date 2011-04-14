@@ -1,23 +1,20 @@
 # -*- encoding: utf-8 -*-
 $:.push File.expand_path("../lib", __FILE__)
-require "hydra-testing/version"
+require "jettywrapper/version"
 require 'bundler'
 
 Gem::Specification.new do |s|
-  s.name        = "hydra-testing"
-  s.version     = Hydra::Testing::VERSION
+  s.name        = "jettywrapper"
+  s.version     = GEMVERSION
   s.platform    = Gem::Platform::RUBY
   s.authors     = ["Bess Sadler"]
   s.email       = ["bess@stanford.edu"]
   s.homepage    = ""
-  s.summary     = %q{Convenience tasks for automated testing for the hydra project.}
-  s.description = %q{Spin up a jetty instance (maybe even the one at https://github.com/projecthydra/hydra-jetty) and wrap test in it. This lets us run tests against a real copy of solr and fedora.}
-
-  s.rubyforge_project = "hydra-testing"
-
+  s.summary     = %q{Convenience tasks for working with jetty from within a ruby project.}
+  s.description = %q{Spin up a jetty instance (e.g., the one at https://github.com/projecthydra/hydra-jetty) and wrap test in it. This lets us run tests against a real copy of solr and fedora.}
   s.files         = `git ls-files`.split("\n")
-  s.test_files    = `git ls-files -- {test,spec,features}/*`.split("\n")
-  s.executables   = `git ls-files -- bin/*`.split("\n").map{ |f| File.basename(f) }
+  s.test_files    = `git ls-files -- {spec}/*`.split("\n")
+  # s.executables   = `git ls-files -- bin/*`.split("\n").map{ |f| File.basename(f) }
   s.require_paths = ["lib"]
   
   s.required_rubygems_version = ">= 1.3.6"
@@ -33,7 +30,11 @@ Gem::Specification.new do |s|
   s.add_development_dependency 'cucumber-rails'
   s.add_development_dependency 'gherkin'
   s.add_development_dependency 'rcov'
-  s.add_development_dependency 'yard'
+  
+  s.add_development_dependency 'yard', '0.6.5'  # Yard > 0.6.5 won't generate docs.
+                                                # I don't know why & don't have time to 
+                                                # debug it right now
+  
   s.add_development_dependency 'RedCloth'
   
 end

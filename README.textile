@@ -1,11 +1,11 @@
-h1. hydra-testing
+h1. jettywrapper
 
 This gem is designed to make it easier to run automated tests against jetty. Solr comes bundled in a jetty instance, and the hydra project has taken a similar approach with hydra-jetty, an instance of jetty pre-configured to load fedora, solr, and various other java servlets of use to the hydra project. 
 
 h2. Instructions for the impatient:
 
 bc.. 
-  require 'hydra-testing'
+  require 'jettywrapper'
   desc "New way of running tests"
   task :newtest do
     Rake::Task["rake:db:test:clone_structure"].invoke
@@ -18,7 +18,7 @@ bc..
       :solr_home => "/usr/local/projects/hydra-hydrus/jetty/solr/test-core",
       :startup_wait => 30
       }
-    error = Hydra::Testing::TestServer.wrap(jetty_params) do   
+    error = Jettywrapper.wrap(jetty_params) do   
       # Rake::Task["libra_oa:default_fixtures:refresh"].invoke 
       Rake::Task["rake:hydra:default_fixtures:load"].invoke       
       Rake::Task["rake:spec"].invoke 
