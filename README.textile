@@ -6,23 +6,28 @@ h2. Instructions for the impatient:
 
 bc.. 
   require 'jettywrapper'
-  desc "New way of running tests"
-  task :newtest do
-    Rake::Task["rake:db:test:clone_structure"].invoke
-    Rake::Task["rake:hydra:jetty:config_fedora"].invoke
-    Rake::Task["rake:hydra:jetty:config"].invoke
-    jetty_params = { 
-      :jetty_home => "/usr/local/projects/hydra-hydrus/jetty", 
-      :quiet => false, 
-      :jetty_port => 8983, 
-      :solr_home => "/usr/local/projects/hydra-hydrus/jetty/solr/test-core",
-      :startup_wait => 30
-      }
-    error = Jettywrapper.wrap(jetty_params) do   
-      # Rake::Task["libra_oa:default_fixtures:refresh"].invoke 
-      Rake::Task["rake:hydra:default_fixtures:load"].invoke       
-      Rake::Task["rake:spec"].invoke 
-      Rake::Task["rake:cucumber"].invoke 
-    end 
-    raise "test failures: #{error}" if error
+  desc "Hudson build"
+  task :hudson do
+    if (ENV['RAILS_ENV'] == "test")
+      jetty_params = { 
+        :jetty_home => File.expand_path(File.dirname(__FILE__) + '/../../jetty'), 
+        :quiet => false, 
+        :jetty_port => 8983, 
+        :solr_home => File.expand_path(File.dirname(__FILE__) + '/../../jetty/solr'),
+        :fedora_home => File.expand_path(File.dirname(__FILE__) + '/../../jetty/fedora/default'),
+        :startup_wait => 30
+        }
+      Rake::Task["db:drop"].invoke
+      Rake::Task["db:migrate"].invoke
+      Rake::Task["db:migrate:plugins"].invoke
+      error = Jettywrapper.wrap(jetty_params) do  
+        Rake::Task["libra_oa:default_fixtures:refresh"].invoke
+        Rake::Task["hydra:fixtures:refresh"].invoke
+        Rake::Task["spec"].invoke
+        Rake::Task["cucumber"].invoke
+      end
+      raise "test failures: #{error}" if error
+    else
+      system("rake hudson RAILS_ENV=test")
+    end
   end
