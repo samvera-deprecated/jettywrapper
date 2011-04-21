@@ -9,7 +9,7 @@ Gem::Specification.new do |s|
   s.platform    = Gem::Platform::RUBY
   s.authors     = ["Bess Sadler"]
   s.email       = ["bess@stanford.edu"]
-  s.homepage    = ""
+  s.homepage    = "https://github.com/projecthydra/jettywrapper"
   s.summary     = %q{Convenience tasks for working with jetty from within a ruby project.}
   s.description = %q{Spin up a jetty instance (e.g., the one at https://github.com/projecthydra/hydra-jetty) and wrap test in it. This lets us run tests against a real copy of solr and fedora.}
   s.files         = `git ls-files`.split("\n")
