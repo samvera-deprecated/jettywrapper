@@ -54,6 +54,16 @@ module Hydra
         ts.fedora_home.should == File.join(ts.jetty_home, "fedora","default")
         ts.startup_wait.should == 5
       end
+      
+      it "passes all the expected values to jetty during startup" do
+        ts = Jettywrapper.configure(@jetty_params) 
+        command = ts.jetty_command
+        command.should include("-Dfedora.home=#{@jetty_params[:fedora_home]}")
+        command.should include("-Dsolr.solr.home=#{@jetty_params[:solr_home]}")
+        command.should include("-Djetty.port=#{@jetty_params[:jetty_port]}")
+        
+      end
+      
     end # end of instantiation context
     
     context "wrapping a task" do

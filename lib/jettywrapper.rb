@@ -25,7 +25,7 @@ class Jettywrapper
     # @param [Symbol] :jetty_port What port should jetty start on? Default is 8888
     # @param [Symbol] :startup_wait After jetty starts, how long to wait before running tests? If you don't let jetty start all the way before running the tests, they'll fail because they can't reach jetty.
     # @param [Symbol] :solr_home Where is solr? Default is jetty_home/solr
-    # @param [Symbol] :fedora_home Where is fedora? Default is jetty_home/fedora
+    # @param [Symbol] :fedora_home Where is fedora? Default is jetty_home/fedora/default
     # @param [Symbol] :quiet Keep quiet about jetty output? Default is true. 
     def configure(params = {})
       hydra_server = self.instance
@@ -91,12 +91,13 @@ class Jettywrapper
    
    # What command is being run to invoke jetty? 
    def jetty_command
-     "java -Djetty.port=#{@port} -Dsolr.solr.home=#{@solr_home} -jar start.jar"
+     "java -Djetty.port=#{@port} -Dsolr.solr.home=#{@solr_home} -Dfedora.home=#{@fedora_home} -jar start.jar"
    end
    
    def start
      puts "jetty_home: #{@jetty_home}"
      puts "solr_home: #{@solr_home}"
+     puts "fedora_home: #{@fedora_home}"
      puts "jetty_command: #{jetty_command}"
      platform_specific_start
    end
