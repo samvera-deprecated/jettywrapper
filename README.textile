@@ -29,5 +29,36 @@ bc..
       raise "test failures: #{error}" if error
     else
       system("rake hudson RAILS_ENV=test")
+      fail unless $?.success?
     end
   end
+
+h2. Important note on creating nested rake tasks:
+
+When creating your rake tasks, keep in mind that rake does not by default propogate up errors raised from system commands.  
+If you use system(), the return value will be false for any exit codes other than 0.  If you use backticks or %x(), you must use $? to check the exit status code 
+after the call.  Failure to do so could result in false successes.
+
+h3. Example 1: Checking return value from system()
+
+bc.. 
+  #retval should return false for non-zero exit codes 
+  retval = system("rake hudson RAILS_ENV=test")
+  fail unless retval
+
+h3. Example 2: Checking $? with system()
+
+bc.. 
+  system("rake hudson RAILS_ENV=test")
+  raise "rake hudson encoutered errors" unless $?.success?
+
+h3. Example 3: An alternative method: using %x[] or backticks with $?
+
+bc.. 
+  # %x[] or `` will return everything sent to stdout from the command
+  puts %x[cucumber --tags ~@pending --tags ~@overwritten features]
+  raise "Cucumber failed." unless $?.success?
+
+
+
+
