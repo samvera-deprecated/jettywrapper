@@ -74,6 +74,31 @@ module Hydra
         ts.pid.should eql(5454)
       end
       
+      it "knows what its pid file should be called" do
+        ts = Jettywrapper.configure(@jetty_params) 
+        ts.pid_file.should eql("hydra-jetty.pid")
+      end
+      
+      it "knows where its pid file should be written" do
+        ts = Jettywrapper.configure(@jetty_params) 
+        ts.pid_dir.should eql(File.expand_path("#{ts.base_path}/tmp/pids"))
+      end
+      
+      it "checks to see if there is an existing pid before starting" do
+        jetty_params = {
+          :jetty_home => '/tmp'
+        }
+        ts = Jettywrapper.configure(jetty_params) 
+        Jettywrapper.any_instance.stubs(:fork).returns(2222)
+        FileUtils.rm(ts.pid_path)
+        ts.pid_file?.should eql(false)
+        ts.start
+        ts.pid.should eql(2222)
+        ts.pid_file?.should eql(true)
+        pid_from_file = File.open( ts.pid_path ) { |f| f.gets.to_i }
+        pid_from_file.should eql(2222)
+      end
+      
     end # end of instantiation context
     
     context "logging" do
@@ -82,7 +107,7 @@ module Hydra
         ts.logger.should be_kind_of(Logger)
       end
       
-    end
+    end # end of logging context 
     
     context "wrapping a task" do
       it "wraps another method" do

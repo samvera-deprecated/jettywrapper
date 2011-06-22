@@ -18,6 +18,7 @@ class Jettywrapper
   attr_accessor :solr_home    # Where is solr located? Default is jetty_home/solr
   attr_accessor :fedora_home  # Where is fedora located? Default is jetty_home/fedora
   attr_accessor :logger       # Where should logs be written?
+  attr_accessor :base_path    # The root of the application. Used for determining where log files and PID files should go.
   
   # configure the singleton with some defaults
   def initialize(params = {})
@@ -27,7 +28,7 @@ class Jettywrapper
     else
       @base_path = "."
     end
-    @logger = Logger.new('debug.log')
+    @logger = Logger.new("#{@base_path}/tmp/jettywrapper-debug.log")
     @logger.debug 'Initializing jettywrapper'
   end
   
@@ -100,9 +101,10 @@ class Jettywrapper
 
       return error
     end
-     
-   end #end of class << self
-   
+    
+    end #end of class << self
+    
+        
    # What command is being run to invoke jetty? 
    def jetty_command
      "java -Djetty.port=#{@port} -Dsolr.solr.home=#{@solr_home} -Dfedora.home=#{@fedora_home} -jar start.jar"
@@ -110,7 +112,6 @@ class Jettywrapper
    
    # Start the jetty server. Check the pid file to see if it is running already, 
    # and stop it if so. After you start jetty, write the PID to a file. 
-
    def start
      puts "jetty_home: #{@jetty_home}"
      puts "solr_home: #{@solr_home}"
@@ -189,16 +190,25 @@ class Jettywrapper
      File.join(pid_dir, pid_file)
    end
 
+   # The file where the process ID will be written
    def pid_file
      @pid_file || 'hydra-jetty.pid'
    end
 
+   # The directory where the pid_file will be written
    def pid_dir
      File.expand_path(@pid_dir || File.join(@base_path,'tmp','pids'))
    end
-
-   def pid
-     @pid || File.open( pid_path ) { |f| return f.gets.to_i } if File.exist?(pid_path)
+   
+   # Check to see if there is a pid file already
+   # @return true if the file exists, otherwise false
+   def pid_file?
+      return true if File.exist?(pid_path)
+      false
    end
 
+   def pid
+      @pid || File.open( pid_path ) { |f| return f.gets.to_i } if File.exist?(pid_path)
+   end
+   
 end
