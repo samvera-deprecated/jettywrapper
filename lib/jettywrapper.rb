@@ -139,7 +139,7 @@ class Jettywrapper
      def platform_specific_start
        jruby_raise_error?   
        Dir.chdir(@jetty_home) do
-         self.pid = fork do
+         @pid = fork do
            STDERR.close if @quiet
            exec jetty_command
          end
