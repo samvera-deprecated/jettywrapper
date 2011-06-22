@@ -4,6 +4,7 @@ class Jettywrapper
   
   require 'singleton'
   include Singleton
+  require 'ftools'
   
   attr_accessor :pid          # If Jettywrapper is running, what pid is it running as? 
   attr_accessor :port         # What port should jetty start on? Default is 8888
@@ -14,9 +15,14 @@ class Jettywrapper
   attr_accessor :fedora_home  # Where is fedora located? Default is jetty_home/fedora
   
   # configure the singleton with some defaults
-  # def initialize
-  #   @pid = nil
-  # end
+  def initialize(params = {})
+    @pid = nil
+    if defined?(Rails.root)
+      @base_path = Rails.root
+    else
+      @base_path = "."
+    end
+  end
   
   class << self
     
@@ -95,63 +101,97 @@ class Jettywrapper
      "java -Djetty.port=#{@port} -Dsolr.solr.home=#{@solr_home} -Dfedora.home=#{@fedora_home} -jar start.jar"
    end
    
+   # Start the jetty server. Check the pid file to see if it is running already, 
+   # and stop it if so. After you start jetty, write the PID to a file. 
+
    def start
      puts "jetty_home: #{@jetty_home}"
      puts "solr_home: #{@solr_home}"
      puts "fedora_home: #{@fedora_home}"
      puts "jetty_command: #{jetty_command}"
-     platform_specific_start
+     if pid
+       begin
+         Process.kill(0,pid)
+         raise("Server is already running with PID #{pid}")
+       rescue Errno::ESRCH
+         STDERR.puts("Removing stale PID file at #{pid_path}")
+         File.delete(pid_path)
+       end
+     end
+     Dir.chdir(@jetty_home) do
+       self.send "#{platform}_process".to_sym
+     end
+     File.makedirs(pid_dir) unless File.directory?(pid_dir)
+     begin
+       f = File.new(pid_path,  "w")
+     rescue Errno::ENOENT, Errno::EACCES
+       f = File.new(File.join(@base_path,'tmp',pid_file),"w")
+     end
+     f.puts "#{@pid}"
+     f.close
    end
-   
+ 
    def stop
-     platform_specific_stop
+     puts "stopping"
+     if pid
+       begin
+         self.send "#{platform}_stop".to_sym
+       rescue Errno::ESRCH
+         STDERR.puts("Removing stale PID file at #{pid_path}")
+       end
+       FileUtils.rm(pid_path)
+     end
    end
-   
-   if RUBY_PLATFORM =~ /mswin32/
-     require 'win32/process'
-   
-     # start jetty for windows
-     def platform_specific_start
-       puts "Starting Jetty on windows"
-       Dir.chdir(@jetty_home) do
-         @pid = Process.create(
-               :app_name         => jetty_command,
-               :creation_flags   => Process::DETACHED_PROCESS,
-               :process_inherit  => false,
-               :thread_inherit   => true,
-               :cwd              => "#{@jetty_home}"
-            ).process_id
-       end
+ 
+   def win_process
+     @pid = Process.create(
+           :app_name         => jetty_command,
+           :creation_flags   => Process::DETACHED_PROCESS,
+           :process_inherit  => false,
+           :thread_inherit   => true,
+           :cwd              => "#{@jetty_home}"
+        ).process_id
+   end
+
+   def platform
+     case RUBY_PLATFORM
+     when /mswin32/
+       return 'win'
+     else
+       return 'nix'
      end
-   
-     # stop jetty for windows
-     def platform_specific_stop
-       Process.kill(1, @pid)
-       Process.wait
+   end
+
+   def nix_process
+     @pid = fork do
+       STDERR.close if @quiet
+       exec jetty_command
      end
-   else # Not Windows
-   
-     def jruby_raise_error?
-       raise 'JRuby requires that you start solr manually, then run "rake spec" or "rake features"' if defined?(JRUBY_VERSION)
-     end
-   
-     # start jetty for *nix
-     def platform_specific_start
-       jruby_raise_error?   
-       Dir.chdir(@jetty_home) do
-         @pid = fork do
-           STDERR.close if @quiet
-           exec jetty_command
-         end
-       end
-     end
-   
-     # stop jetty for *nix
-     def platform_specific_stop
-       jruby_raise_error?
-       Process.kill('TERM', @pid)
-       Process.wait
-     end
-  end
+   end
+
+   # stop a running solr server
+   def win_stop
+     Process.kill(1, @pid)
+   end
+
+   def nix_stop
+     Process.kill('TERM',pid)
+   end
+
+   def pid_path
+     File.join(pid_dir, pid_file)
+   end
+
+   def pid_file
+     @pid_file || 'hydra-jetty.pid'
+   end
+
+   def pid_dir
+     File.expand_path(@pid_dir || File.join(@base_path,'tmp','pids'))
+   end
+
+   def pid
+     @pid || File.open( pid_path ) { |f| return f.gets.to_i } if File.exist?(pid_path)
+   end
 
 end
