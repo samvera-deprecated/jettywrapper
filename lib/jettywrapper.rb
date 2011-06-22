@@ -113,16 +113,18 @@ class Jettywrapper
    # Start the jetty server. Check the pid file to see if it is running already, 
    # and stop it if so. After you start jetty, write the PID to a file. 
    def start
-     puts "jetty_home: #{@jetty_home}"
-     puts "solr_home: #{@solr_home}"
-     puts "fedora_home: #{@fedora_home}"
-     puts "jetty_command: #{jetty_command}"
+     @logger.debug "Starting jetty with these values: "
+     @logger.debug "jetty_home: #{@jetty_home}"
+     @logger.debug "solr_home: #{@solr_home}"
+     @logger.debug "fedora_home: #{@fedora_home}"
+     @logger.debug "jetty_command: #{jetty_command}"
+     
      if pid
        begin
          Process.kill(0,pid)
          raise("Server is already running with PID #{pid}")
        rescue Errno::ESRCH
-         STDERR.puts("Removing stale PID file at #{pid_path}")
+         @logger.warn "Removing stale PID file at #{pid_path}"
          File.delete(pid_path)
        end
      end

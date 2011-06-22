@@ -84,7 +84,7 @@ module Hydra
         ts.pid_dir.should eql(File.expand_path("#{ts.base_path}/tmp/pids"))
       end
       
-      it "checks to see if there is an existing pid before starting" do
+      it "writes a pid to a file when it is started" do
         jetty_params = {
           :jetty_home => '/tmp'
         }
@@ -97,6 +97,21 @@ module Hydra
         ts.pid_file?.should eql(true)
         pid_from_file = File.open( ts.pid_path ) { |f| f.gets.to_i }
         pid_from_file.should eql(2222)
+      end
+      
+      it "checks to see if jetty is running already before it starts" do
+        jetty_params = {
+          :jetty_home => '/tmp'
+        }
+        ts = Jettywrapper.configure(jetty_params) 
+        Jettywrapper.any_instance.stubs(:fork).returns(3333)
+        FileUtils.rm(ts.pid_path)
+        ts.pid_file?.should eql(false)
+        ts.start
+        ts.pid.should eql(3333)
+        Jettywrapper.any_instance.stubs(:fork).returns(4444)
+        ts.start
+        ts.pid.should eql(4444)
       end
       
     end # end of instantiation context
