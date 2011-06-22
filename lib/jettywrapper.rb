@@ -1,10 +1,14 @@
 # Jettywrapper is a Singleton class, so you can only create one jetty instance at a time.
+require 'rubygems'
+require 'logger'
+require 'loggable'
+require 'singleton'
+require 'ftools'
 
 class Jettywrapper
   
-  require 'singleton'
   include Singleton
-  require 'ftools'
+  include Loggable
   
   attr_accessor :pid          # If Jettywrapper is running, what pid is it running as? 
   attr_accessor :port         # What port should jetty start on? Default is 8888
@@ -13,15 +17,18 @@ class Jettywrapper
   attr_accessor :quiet        # Keep quiet about jetty output?
   attr_accessor :solr_home    # Where is solr located? Default is jetty_home/solr
   attr_accessor :fedora_home  # Where is fedora located? Default is jetty_home/fedora
+  attr_accessor :logger       # Where should logs be written?
   
   # configure the singleton with some defaults
   def initialize(params = {})
-    @pid = nil
+    # @pid = nil
     if defined?(Rails.root)
       @base_path = Rails.root
     else
       @base_path = "."
     end
+    @logger = Logger.new('debug.log')
+    @logger.debug 'Initializing jettywrapper'
   end
   
   class << self

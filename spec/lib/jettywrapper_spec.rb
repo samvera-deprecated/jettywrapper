@@ -76,6 +76,14 @@ module Hydra
       
     end # end of instantiation context
     
+    context "logging" do
+      it "has a logger" do
+        ts = Jettywrapper.configure(@jetty_params) 
+        ts.logger.should be_kind_of(Logger)
+      end
+      
+    end
+    
     context "wrapping a task" do
       it "wraps another method" do
         Jettywrapper.any_instance.stubs(:start).returns(true)
