@@ -1,5 +1,7 @@
 require File.join(File.dirname(__FILE__), "/../spec_helper")
 require File.join(File.dirname(__FILE__), "/../../lib/jettywrapper")
+require 'rubygems'
+require 'ruby-debug'
 
 module Hydra
   describe Jettywrapper do
@@ -158,7 +160,6 @@ module Hydra
         error.message.should eql("foo")
       end
       
-    end
-    
+    end # end of wrapping context
   end
 end

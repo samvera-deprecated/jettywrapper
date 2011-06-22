@@ -7,3 +7,4 @@ coverage.data
 *~
 .yardoc
 doc
+tmp/

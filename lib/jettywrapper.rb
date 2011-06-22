@@ -118,7 +118,7 @@ class Jettywrapper
      @logger.debug "solr_home: #{@solr_home}"
      @logger.debug "fedora_home: #{@fedora_home}"
      @logger.debug "jetty_command: #{jetty_command}"
-     
+          
      if pid
        begin
          Process.kill(0,pid)
@@ -139,15 +139,16 @@ class Jettywrapper
      end
      f.puts "#{@pid}"
      f.close
+     @logger.debug "Wrote pid file to #{pid_path} with value #{@pid}"
    end
  
    def stop
-     puts "stopping"
+     @logger.warn "stopping jetty... "
      if pid
        begin
          self.send "#{platform}_stop".to_sym
        rescue Errno::ESRCH
-         STDERR.puts("Removing stale PID file at #{pid_path}")
+         @logger.warn "Removing stale PID file at #{pid_path}"
        end
        FileUtils.rm(pid_path)
      end
@@ -174,17 +175,19 @@ class Jettywrapper
 
    def nix_process
      @pid = fork do
-       STDERR.close if @quiet
+       # STDERR.close if @quiet
        exec jetty_command
      end
    end
 
-   # stop a running solr server
+   # stop jetty the windows way
    def win_stop
-     Process.kill(1, @pid)
+     Process.kill(1, pid)
    end
 
+   # stop jetty the *nix way
    def nix_stop
+     @logger.debug "Killing process #{pid}"
      Process.kill('TERM',pid)
    end
 
