@@ -1,3 +1,6 @@
 [submodule "jetty1"]
 	path = jetty1
 	url = git://github.com/projecthydra/hydra-jetty.git
+[submodule "jetty2"]
+	path = jetty2
+	url = git://github.com/projecthydra/hydra-jetty.git

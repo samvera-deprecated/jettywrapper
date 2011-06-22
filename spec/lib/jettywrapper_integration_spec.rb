@@ -53,6 +53,36 @@ module Hydra
         ts.stop
       end
       
+      it "can start multiple copies of jetty, as long as they have different jetty_homes" do
+        jetty1_params = {
+          :jetty_home => File.expand_path("#{File.dirname(__FILE__)}/../../jetty1"),
+          :jetty_port => '8983'
+        }
+        jetty2_params = {
+          :jetty_home => File.expand_path("#{File.dirname(__FILE__)}/../../jetty2"),
+          :jetty_port => '8984'
+        }
+        
+        # Ensure nothing is running when we start
+        Jettywrapper.stop_with_params(jetty1_params) 
+        Jettywrapper.stop_with_params(jetty2_params)
+        
+        # Spin up two copies of jetty, with different jetty home values and on different ports
+        Jettywrapper.start_with_params(jetty1_params) 
+        Jettywrapper.start_with_params(jetty2_params) 
+        
+        # Ensure both are viable
+        sleep 15
+        response1 = Net::HTTP.get_response(URI.parse("http://localhost:8983/solr/admin/"))
+        response1.code.should eql("200")
+        response2 = Net::HTTP.get_response(URI.parse("http://localhost:8984/solr/admin/"))
+        response2.code.should eql("200")
+        
+        # Shut them both down
+        Jettywrapper.stop_with_params(jetty1_params) 
+        Jettywrapper.stop_with_params(jetty2_params)
+      end
+      
     end
     
   end

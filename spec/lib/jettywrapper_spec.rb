@@ -72,13 +72,39 @@ module Hydra
         }
         ts = Jettywrapper.configure(jetty_params) 
         Jettywrapper.any_instance.stubs(:fork).returns(5454)
+        ts.stop
         ts.start
         ts.pid.should eql(5454)
       end
       
+      it "can pass params to a start method" do
+        jetty_params = {
+          :jetty_home => '/tmp', :jetty_port => 8777
+        }
+        ts = Jettywrapper.configure(jetty_params) 
+        ts.stop
+        Jettywrapper.any_instance.stubs(:fork).returns(2323)
+        swp = Jettywrapper.start_with_params(jetty_params)
+        swp.pid.should eql(2323)
+        swp.pid_file.should eql("_tmp.pid")
+        swp.stop
+      end
+      
+      it "can pass params to a stop method" do
+        jetty_params = {
+          :jetty_home => '/tmp', :jetty_port => 8777
+        }
+        Jettywrapper.any_instance.stubs(:fork).returns(2323)
+        swp = Jettywrapper.start_with_params(jetty_params)
+        (File.file? swp.pid_path).should eql(true)
+        
+        swp = Jettywrapper.stop_with_params(jetty_params)
+        (File.file? swp.pid_path).should eql(false)
+      end
+      
       it "knows what its pid file should be called" do
         ts = Jettywrapper.configure(@jetty_params) 
-        ts.pid_file.should eql("hydra-jetty.pid")
+        ts.pid_file.should eql("_path_to_jetty.pid")
       end
       
       it "knows where its pid file should be written" do
@@ -92,7 +118,7 @@ module Hydra
         }
         ts = Jettywrapper.configure(jetty_params) 
         Jettywrapper.any_instance.stubs(:fork).returns(2222)
-        FileUtils.rm(ts.pid_path)
+        ts.stop
         ts.pid_file?.should eql(false)
         ts.start
         ts.pid.should eql(2222)
@@ -107,7 +133,7 @@ module Hydra
         }
         ts = Jettywrapper.configure(jetty_params) 
         Jettywrapper.any_instance.stubs(:fork).returns(3333)
-        FileUtils.rm(ts.pid_path)
+        ts.stop
         ts.pid_file?.should eql(false)
         ts.start
         ts.pid.should eql(3333)

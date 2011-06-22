@@ -102,6 +102,28 @@ class Jettywrapper
       return error
     end
     
+    # Convenience method for configuring and starting jetty with one command
+    # @param [Hash] params: The configuration to use for starting jetty
+    # @example 
+    #    Jettywrapper.start_with_params(:jetty_home => '/path/to/jetty', :jetty_port => '8983')
+    def start_with_params(params)
+       Jettywrapper.configure(params)
+       Jettywrapper.instance.start
+       return Jettywrapper.instance
+    end
+    
+    # Convenience method for configuring and starting jetty with one command. Note
+    # that for stopping, only the :jetty_home value is required (including other values won't 
+    # hurt anything, though). 
+    # @param [Hash] params: The jetty_home to use for stopping jetty
+    # @example 
+    #    Jettywrapper.stop_with_params(:jetty_home => '/path/to/jetty')
+    def stop_with_params(params)
+       Jettywrapper.configure(params)
+       Jettywrapper.instance.stop
+       return Jettywrapper.instance
+    end
+    
     end #end of class << self
     
         
@@ -197,7 +219,15 @@ class Jettywrapper
 
    # The file where the process ID will be written
    def pid_file
-     @pid_file || 'hydra-jetty.pid'
+     @pid_file || jetty_home_to_pid_file
+   end
+   
+   # Take the @jetty_home value and transform it into a legal filename
+   # @return [String] the name of the pid_file
+   # @example
+   #    /usr/local/jetty1 => _usr_local_jetty1.pid
+   def jetty_home_to_pid_file
+    @jetty_home.gsub(/\//,'_') << ".pid"
    end
 
    # The directory where the pid_file will be written
