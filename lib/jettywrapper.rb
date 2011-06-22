@@ -5,6 +5,7 @@ class Jettywrapper
   require 'singleton'
   include Singleton
   
+  attr_accessor :pid          # If Jettywrapper is running, what pid is it running as? 
   attr_accessor :port         # What port should jetty start on? Default is 8888
   attr_accessor :jetty_home   # Where is jetty located? 
   attr_accessor :startup_wait # After jetty starts, how long to wait until starting the tests? 
@@ -13,9 +14,9 @@ class Jettywrapper
   attr_accessor :fedora_home  # Where is fedora located? Default is jetty_home/fedora
   
   # configure the singleton with some defaults
-  def initialize
-    @pid = nil
-  end
+  # def initialize
+  #   @pid = nil
+  # end
   
   class << self
     
@@ -109,8 +110,9 @@ class Jettywrapper
    if RUBY_PLATFORM =~ /mswin32/
      require 'win32/process'
    
-     # start the solr server
+     # start jetty for windows
      def platform_specific_start
+       puts "Starting Jetty on windows"
        Dir.chdir(@jetty_home) do
          @pid = Process.create(
                :app_name         => jetty_command,
@@ -122,7 +124,7 @@ class Jettywrapper
        end
      end
    
-     # stop a running solr server
+     # stop jetty for windows
      def platform_specific_stop
        Process.kill(1, @pid)
        Process.wait
@@ -133,21 +135,18 @@ class Jettywrapper
        raise 'JRuby requires that you start solr manually, then run "rake spec" or "rake features"' if defined?(JRUBY_VERSION)
      end
    
-     # start the solr server
+     # start jetty for *nix
      def platform_specific_start
-   
-       jruby_raise_error?
-   
-       puts self.inspect
+       jruby_raise_error?   
        Dir.chdir(@jetty_home) do
-         @pid = fork do
+         self.pid = fork do
            STDERR.close if @quiet
            exec jetty_command
          end
        end
      end
    
-     # stop a running solr server
+     # stop jetty for *nix
      def platform_specific_stop
        jruby_raise_error?
        Process.kill('TERM', @pid)

@@ -64,6 +64,16 @@ module Hydra
         
       end
       
+      it "has a pid if it has been started" do
+        jetty_params = {
+          :jetty_home => '/tmp'
+        }
+        ts = Jettywrapper.configure(jetty_params) 
+        Jettywrapper.any_instance.stubs(:fork).returns(5454)
+        ts.start
+        ts.pid.should eql(5454)
+      end
+      
     end # end of instantiation context
     
     context "wrapping a task" do
