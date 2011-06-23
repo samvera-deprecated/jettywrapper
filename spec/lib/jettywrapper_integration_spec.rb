@@ -25,7 +25,7 @@ module Hydra
         ts.logger.debug "Jetty started from rspec at #{ts.pid}"
         pid_from_file = File.open( ts.pid_path ) { |f| f.gets.to_i }
         ts.pid.should eql(pid_from_file)
-        sleep 15 # give jetty time to start
+        sleep 30 # give jetty time to start
       
         # Can we connect to solr?
         require 'net/http' 
@@ -45,7 +45,7 @@ module Hydra
         ts.logger.debug "Stopping jetty from rspec."
         ts.stop
         ts.start
-        sleep 15
+        sleep 30
         ts.logger.debug "Jetty started from rspec at #{ts.pid}"
         response = Net::HTTP.get_response(URI.parse("http://localhost:8888/solr/admin/"))
         response.code.should eql("200")
@@ -72,7 +72,7 @@ module Hydra
         Jettywrapper.start_with_params(jetty2_params) 
         
         # Ensure both are viable
-        sleep 15
+        sleep 30
         response1 = Net::HTTP.get_response(URI.parse("http://localhost:8983/solr/admin/"))
         response1.code.should eql("200")
         response2 = Net::HTTP.get_response(URI.parse("http://localhost:8984/solr/admin/"))
