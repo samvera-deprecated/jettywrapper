@@ -4,6 +4,9 @@ require 'logger'
 require 'loggable'
 require 'singleton'
 require 'ftools'
+require 'socket'
+require 'timeout'
+require 'ruby-debug'
 
 class Jettywrapper
   
@@ -32,6 +35,8 @@ class Jettywrapper
     @logger.debug 'Initializing jettywrapper'
   end
   
+  # Methods inside of the class << self block can be called directly on Jettywrapper, as class methods. 
+  # Methods outside the class << self block must be called on Jettywrapper.instance, as instance methods.
   class << self
     
     # Set the jetty parameters. It accepts a Hash of symbols. 
@@ -76,7 +81,7 @@ class Jettywrapper
     #     end 
     #     raise "test failures: #{error}" if error
     #   end
-    def wrap(params = {})
+    def wrap(params)
       error = false
       jetty_server = self.instance
       jetty_server.quiet = params[:quiet] || true
@@ -106,7 +111,7 @@ class Jettywrapper
     # @param [Hash] params: The configuration to use for starting jetty
     # @example 
     #    Jettywrapper.start_with_params(:jetty_home => '/path/to/jetty', :jetty_port => '8983')
-    def start_with_params(params)
+    def start(params)
        Jettywrapper.configure(params)
        Jettywrapper.instance.start
        return Jettywrapper.instance
@@ -116,12 +121,70 @@ class Jettywrapper
     # that for stopping, only the :jetty_home value is required (including other values won't 
     # hurt anything, though). 
     # @param [Hash] params: The jetty_home to use for stopping jetty
+    # @return [Jettywrapper.instance]
     # @example 
     #    Jettywrapper.stop_with_params(:jetty_home => '/path/to/jetty')
-    def stop_with_params(params)
+    def stop(params)
        Jettywrapper.configure(params)
        Jettywrapper.instance.stop
        return Jettywrapper.instance
+    end
+    
+    # Determine whether the jetty at the given jetty_home is running
+    # @param [Hash] params: :jetty_home is required. Which jetty do you want to check the status of?
+    # @return [Boolean]
+    # @example
+    #    Jettywrapper.is_running?(:jetty_home => '/path/to/jetty')
+    def is_jetty_running?(params)      
+      Jettywrapper.configure(params)
+      pid = Jettywrapper.instance.pid
+      return false unless pid
+      true
+    end
+    
+    # Return the pid of the specified jetty, or return nil if it isn't running
+    # @param [Hash] params: :jetty_home is required.
+    # @return [Fixnum] or [nil]
+    # @example
+    #    Jettywrapper.pid(:jetty_home => '/path/to/jetty')
+    def pid(params)
+      Jettywrapper.configure(params)
+      pid = Jettywrapper.instance.pid
+      return nil unless pid
+      pid
+    end
+    
+    # Check to see if the port is open so we can raise an error if we have a conflict
+    # @param [Fixnum] port the port to check
+    # @return [Boolean]
+    # @example
+    #  Jettywrapper.is_port_open?(8983)
+    def is_port_in_use?(port)
+      begin
+        Timeout::timeout(1) do
+          begin
+            s = TCPSocket.new('127.0.0.1', port)
+            s.close
+            return true
+          rescue Errno::ECONNREFUSED, Errno::EHOSTUNREACH
+            return false
+          rescue
+            return false
+          end
+        end
+      rescue Timeout::Error
+      end
+
+      return false
+    end
+    
+    # Check to see if the pid is actually running. This only works on unix. 
+    def is_running?(pid)
+      begin
+        return Process.getpgid(pid) != -1
+      rescue Errno::ESRCH
+        return false
+      end
     end
     
     end #end of class << self
@@ -134,20 +197,31 @@ class Jettywrapper
    
    # Start the jetty server. Check the pid file to see if it is running already, 
    # and stop it if so. After you start jetty, write the PID to a file. 
+   # This is the instance start method. It must be called on Jettywrapper.instance
+   # You're probably better off using Jettywrapper.start(:jetty_home => "/path/to/jetty")
+   # @example
+   #    Jettywrapper.configure(params)
+   #    Jettywrapper.instance.start
+   #    return Jettywrapper.instance
    def start
      @logger.debug "Starting jetty with these values: "
      @logger.debug "jetty_home: #{@jetty_home}"
      @logger.debug "solr_home: #{@solr_home}"
      @logger.debug "fedora_home: #{@fedora_home}"
      @logger.debug "jetty_command: #{jetty_command}"
-          
+     
+     # Check to see if we can start.
+     # 1. If there is a pid, check to see if it is really running
+     # 2. Check to see if anything is blocking the port we want to use     
      if pid
-       begin
-         Process.kill(0,pid)
+       if Jettywrapper.is_running?(pid)
          raise("Server is already running with PID #{pid}")
-       rescue Errno::ESRCH
+       else
          @logger.warn "Removing stale PID file at #{pid_path}"
          File.delete(pid_path)
+       end
+       if Jettywrapper.is_port_in_use?(@jetty_port)
+         raise("Port #{self.jetty_port} is already in use.")
        end
      end
      Dir.chdir(@jetty_home) do
@@ -164,36 +238,47 @@ class Jettywrapper
      @logger.debug "Wrote pid file to #{pid_path} with value #{@pid}"
    end
  
-   def stop
-     @logger.warn "stopping jetty... "
+   # Instance stop method. Must be called on Jettywrapper.instance
+   # You're probably better off using Jettywrapper.stop(:jetty_home => "/path/to/jetty")
+   # @example
+   #    Jettywrapper.configure(params)
+   #    Jettywrapper.instance.stop
+   #    return Jettywrapper.instance
+   def stop    
      if pid
        begin
          self.send "#{platform}_stop".to_sym
        rescue Errno::ESRCH
-         @logger.warn "Removing stale PID file at #{pid_path}"
+         @logger.error "I tried to kill the process #{pid} but it seems it wasn't running."
        end
-       FileUtils.rm(pid_path)
+       begin
+         File.delete(pid_path)
+       rescue
+       end
      end
    end
  
-   def win_process
-     @pid = Process.create(
-           :app_name         => jetty_command,
-           :creation_flags   => Process::DETACHED_PROCESS,
-           :process_inherit  => false,
-           :thread_inherit   => true,
-           :cwd              => "#{@jetty_home}"
-        ).process_id
-   end
+    # Spawn a process on windows
+    def win_process
+      @pid = Process.create(
+         :app_name         => jetty_command,
+         :creation_flags   => Process::DETACHED_PROCESS,
+         :process_inherit  => false,
+         :thread_inherit   => true,
+         :cwd              => "#{@jetty_home}"
+      ).process_id
+    end
 
-   def platform
-     case RUBY_PLATFORM
-     when /mswin32/
-       return 'win'
-     else
-       return 'nix'
-     end
-   end
+    # Determine whether we're running on windows or unix. We need to know this so 
+    # we know how to start and stop processes. 
+    def platform
+      case RUBY_PLATFORM
+        when /mswin32/
+           return 'win'
+        else
+           return 'nix'
+      end
+    end
 
    def nix_process
      @pid = fork do
@@ -209,26 +294,43 @@ class Jettywrapper
 
    # stop jetty the *nix way
    def nix_stop
-     @logger.debug "Killing process #{pid}"
-     Process.kill('TERM',pid)
+     return nil if pid == nil
+     begin
+       pid_keeper = pid
+       @logger.debug "Killing process #{pid}"
+       Process.kill('TERM',pid)
+       sleep 2
+       FileUtils.rm(pid_path)
+       if Jettywrapper.is_running?(pid_keeper)
+         raise "Couldn't kill process #{pid_keeper}"
+       end
+     rescue Errno::ESRCH
+       @logger.debug "I tried to kill #{pid_keeper} but it appears it wasn't running."
+     end
    end
 
+   # The fully qualified path to the pid_file
    def pid_path
      File.join(pid_dir, pid_file)
    end
 
    # The file where the process ID will be written
    def pid_file
-     @pid_file || jetty_home_to_pid_file
+     @pid_file || jetty_home_to_pid_file(@jetty_home)
    end
    
-   # Take the @jetty_home value and transform it into a legal filename
-   # @return [String] the name of the pid_file
-   # @example
-   #    /usr/local/jetty1 => _usr_local_jetty1.pid
-   def jetty_home_to_pid_file
-    @jetty_home.gsub(/\//,'_') << ".pid"
-   end
+    # Take the @jetty_home value and transform it into a legal filename
+    # @return [String] the name of the pid_file
+    # @example
+    #    /usr/local/jetty1 => _usr_local_jetty1.pid
+    def jetty_home_to_pid_file(jetty_home)
+      begin
+        jetty_home.gsub(/\//,'_') << ".pid"
+      rescue
+        raise "Couldn't make a pid file for jetty_home value #{jetty_home}"
+        raise $!
+      end
+    end
 
    # The directory where the pid_file will be written
    def pid_dir
@@ -242,6 +344,7 @@ class Jettywrapper
       false
    end
 
+   # the process id of the currently running jetty instance
    def pid
       @pid || File.open( pid_path ) { |f| return f.gets.to_i } if File.exist?(pid_path)
    end

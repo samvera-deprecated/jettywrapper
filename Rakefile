@@ -4,7 +4,7 @@ require 'spec/rake/spectask'
 require 'yard'
 
 Bundler::GemHelper.install_tasks
-Dir.glob('lib/tasks/*.rake').each { |r| import r }
+Dir.glob('tasks/*.rake').each { |r| import r }
 
 
 begin

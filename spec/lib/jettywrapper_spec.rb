@@ -6,6 +6,8 @@ require 'ruby-debug'
 module Hydra
   describe Jettywrapper do
     
+    # JETTY1 = 
+    
     before(:all) do
       @jetty_params = {
         :quiet => false,
@@ -75,6 +77,7 @@ module Hydra
         ts.stop
         ts.start
         ts.pid.should eql(5454)
+        ts.stop
       end
       
       it "can pass params to a start method" do
@@ -84,10 +87,42 @@ module Hydra
         ts = Jettywrapper.configure(jetty_params) 
         ts.stop
         Jettywrapper.any_instance.stubs(:fork).returns(2323)
-        swp = Jettywrapper.start_with_params(jetty_params)
+        swp = Jettywrapper.start(jetty_params)
         swp.pid.should eql(2323)
         swp.pid_file.should eql("_tmp.pid")
         swp.stop
+      end
+      
+      it "checks to see if its pid files are stale" do
+        @pending
+      end
+      
+      # return true if it's running, otherwise return false
+      it "can get the status for a given jetty instance" do
+        # Don't actually start jetty, just fake it
+        Jettywrapper.any_instance.stubs(:fork).returns(12345)
+        
+        jetty_params = {
+          :jetty_home => File.expand_path("#{File.dirname(__FILE__)}/../../jetty1")
+        }
+        Jettywrapper.stop(jetty_params)
+        Jettywrapper.is_jetty_running?(jetty_params).should eql(false)
+        Jettywrapper.start(jetty_params)
+        Jettywrapper.is_jetty_running?(jetty_params).should eql(true)
+        Jettywrapper.stop(jetty_params)
+      end
+      
+      it "can get the pid for a given jetty instance" do
+        # Don't actually start jetty, just fake it
+        Jettywrapper.any_instance.stubs(:fork).returns(54321)
+        jetty_params = {
+          :jetty_home => File.expand_path("#{File.dirname(__FILE__)}/../../jetty1")
+        }
+        Jettywrapper.stop(jetty_params)
+        Jettywrapper.pid(jetty_params).should eql(nil)
+        Jettywrapper.start(jetty_params)
+        Jettywrapper.pid(jetty_params).should eql(54321)
+        Jettywrapper.stop(jetty_params)
       end
       
       it "can pass params to a stop method" do
@@ -95,10 +130,10 @@ module Hydra
           :jetty_home => '/tmp', :jetty_port => 8777
         }
         Jettywrapper.any_instance.stubs(:fork).returns(2323)
-        swp = Jettywrapper.start_with_params(jetty_params)
+        swp = Jettywrapper.start(jetty_params)
         (File.file? swp.pid_path).should eql(true)
         
-        swp = Jettywrapper.stop_with_params(jetty_params)
+        swp = Jettywrapper.stop(jetty_params)
         (File.file? swp.pid_path).should eql(false)
       end
       
@@ -125,21 +160,6 @@ module Hydra
         ts.pid_file?.should eql(true)
         pid_from_file = File.open( ts.pid_path ) { |f| f.gets.to_i }
         pid_from_file.should eql(2222)
-      end
-      
-      it "checks to see if jetty is running already before it starts" do
-        jetty_params = {
-          :jetty_home => '/tmp'
-        }
-        ts = Jettywrapper.configure(jetty_params) 
-        Jettywrapper.any_instance.stubs(:fork).returns(3333)
-        ts.stop
-        ts.pid_file?.should eql(false)
-        ts.start
-        ts.pid.should eql(3333)
-        Jettywrapper.any_instance.stubs(:fork).returns(4444)
-        ts.start
-        ts.pid.should eql(4444)
       end
       
     end # end of instantiation context
@@ -180,10 +200,10 @@ module Hydra
         Jettywrapper.any_instance.stubs(:start).returns(true)
         Jettywrapper.any_instance.stubs(:stop).returns(true)
         error = Jettywrapper.wrap(@jetty_params) do 
-          raise "foo"
+          raise "this is an expected error message"
         end
         error.class.should eql(RuntimeError)
-        error.message.should eql("foo")
+        error.message.should eql("this is an expected error message")
       end
       
     end # end of wrapping context

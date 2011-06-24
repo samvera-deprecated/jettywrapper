@@ -12,10 +12,8 @@ module Hydra
       end
       
       it "starts" do
-        
         jetty_params = {
           :jetty_home => File.expand_path("#{File.dirname(__FILE__)}/../../jetty1")
-        
         }
         Jettywrapper.configure(jetty_params) 
         ts = Jettywrapper.instance
@@ -38,7 +36,6 @@ module Hydra
       it "won't start if it's already running" do
         jetty_params = {
           :jetty_home => File.expand_path("#{File.dirname(__FILE__)}/../../jetty1")
-        
         }
         Jettywrapper.configure(jetty_params) 
         ts = Jettywrapper.instance
@@ -64,12 +61,12 @@ module Hydra
         }
         
         # Ensure nothing is running when we start
-        Jettywrapper.stop_with_params(jetty1_params) 
-        Jettywrapper.stop_with_params(jetty2_params)
+        Jettywrapper.stop(jetty1_params) 
+        Jettywrapper.stop(jetty2_params)
         
         # Spin up two copies of jetty, with different jetty home values and on different ports
-        Jettywrapper.start_with_params(jetty1_params) 
-        Jettywrapper.start_with_params(jetty2_params) 
+        Jettywrapper.start(jetty1_params) 
+        Jettywrapper.start(jetty2_params) 
         
         # Ensure both are viable
         sleep 30
@@ -79,8 +76,58 @@ module Hydra
         response2.code.should eql("200")
         
         # Shut them both down
-        Jettywrapper.stop_with_params(jetty1_params) 
-        Jettywrapper.stop_with_params(jetty2_params)
+        Jettywrapper.stop(jetty1_params) 
+        Jettywrapper.stop(jetty2_params)
+      end
+      
+      it "raises an error if you try to start a jetty that is already running" do
+        jetty_params = {
+          :jetty_home => File.expand_path("#{File.dirname(__FILE__)}/../../jetty1"),
+          :jetty_port => '8983'
+        }
+        ts = Jettywrapper.configure(jetty_params) 
+        ts.stop
+        ts.pid_file?.should eql(false)
+        ts.start
+        sleep 30
+        lambda{ ts.start }.should raise_exception
+        ts.stop
+      end
+      
+      it "can check to see whether a port is already in use" do
+        params = {
+          :jetty_home => File.expand_path("#{File.dirname(__FILE__)}/../../jetty1"),
+          :jetty_port => '9999'
+        }
+        Jettywrapper.stop(params) 
+        sleep 10
+        Jettywrapper.is_port_in_use?(params[:jetty_port]).should eql(false)
+        Jettywrapper.start(params) 
+        sleep 30
+        Jettywrapper.is_port_in_use?(params[:jetty_port]).should eql(true)
+        Jettywrapper.stop(params) 
+      end
+      
+      it "won't start if there is a port conflict" do
+        jetty1_params = {
+          :jetty_home => File.expand_path("#{File.dirname(__FILE__)}/../../jetty1"),
+          :jetty_port => '8983'
+        }
+        jetty2_params = {
+          :jetty_home => File.expand_path("#{File.dirname(__FILE__)}/../../jetty2"),
+          :jetty_port => '8983'
+        }
+        # Ensure nothing is running when we start
+        Jettywrapper.stop(jetty1_params) 
+        Jettywrapper.stop(jetty2_params)
+        
+        # Spin up two copies of jetty, with different jetty home values but the same port
+        Jettywrapper.start(jetty1_params) 
+        lambda{ Jettywrapper.start(jetty2_params) }.should raise_exception
+        
+        # Shut them both down
+        Jettywrapper.stop(jetty1_params) 
+        Jettywrapper.stop(jetty2_params)
       end
       
     end
