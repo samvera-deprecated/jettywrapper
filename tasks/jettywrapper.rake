@@ -19,13 +19,13 @@ namespace :jettywrapper do
     
     desc "Return the status of jetty1"
     task :jetty1 do
-      status = Jettywrapper.is_running?(jetty1) ? "Running: #{Jettywrapper.pid(jetty1)}" : "Not running"
+      status = Jettywrapper.is_jetty_running?(jetty1) ? "Running: #{Jettywrapper.pid(jetty1)}" : "Not running"
       puts status
     end
     
     desc "Return the status of jetty2"
     task :jetty2 do
-      status = Jettywrapper.is_running?(jetty2) ? "Running: #{Jettywrapper.pid(jetty2)}" : "Not running"
+      status = Jettywrapper.is_jetty_running?(jetty2) ? "Running: #{Jettywrapper.pid(jetty2)}" : "Not running"
       puts status
     end
     
@@ -58,7 +58,7 @@ namespace :jettywrapper do
     desc "stop jetty2"
     task :jetty2 do
       Jettywrapper.stop(jetty2)
-      puts "jetty1 stopped"
+      puts "jetty2 stopped"
     end
     
   end

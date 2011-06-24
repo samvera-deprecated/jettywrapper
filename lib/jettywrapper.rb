@@ -134,7 +134,7 @@ class Jettywrapper
     # @param [Hash] params: :jetty_home is required. Which jetty do you want to check the status of?
     # @return [Boolean]
     # @example
-    #    Jettywrapper.is_running?(:jetty_home => '/path/to/jetty')
+    #    Jettywrapper.is_jetty_running?(:jetty_home => '/path/to/jetty')
     def is_jetty_running?(params)      
       Jettywrapper.configure(params)
       pid = Jettywrapper.instance.pid
@@ -179,7 +179,7 @@ class Jettywrapper
     end
     
     # Check to see if the pid is actually running. This only works on unix. 
-    def is_running?(pid)
+    def is_pid_running?(pid)
       begin
         return Process.getpgid(pid) != -1
       rescue Errno::ESRCH
@@ -214,7 +214,7 @@ class Jettywrapper
      # 1. If there is a pid, check to see if it is really running
      # 2. Check to see if anything is blocking the port we want to use     
      if pid
-       if Jettywrapper.is_running?(pid)
+       if Jettywrapper.is_pid_running?(pid)
          raise("Server is already running with PID #{pid}")
        else
          @logger.warn "Removing stale PID file at #{pid_path}"
@@ -245,6 +245,7 @@ class Jettywrapper
    #    Jettywrapper.instance.stop
    #    return Jettywrapper.instance
    def stop    
+     @logger.debug "Instance stop method called for pid #{pid}"
      if pid
        begin
          self.send "#{platform}_stop".to_sym
@@ -294,18 +295,23 @@ class Jettywrapper
 
    # stop jetty the *nix way
    def nix_stop
+     @logger.debug "Attempting to kill process id #{pid}."
      return nil if pid == nil
      begin
        pid_keeper = pid
-       @logger.debug "Killing process #{pid}"
-       Process.kill('TERM',pid)
-       sleep 2
-       FileUtils.rm(pid_path)
-       if Jettywrapper.is_running?(pid_keeper)
+       # Try to kill the process a few times to make sure it dies 
+       3.times do
+          Process.kill('TERM',pid)
+          break if Jettywrapper.is_pid_running?(pid_keeper)==false
+          sleep 2
+       end
+       if Jettywrapper.is_pid_running?(pid_keeper)
          raise "Couldn't kill process #{pid_keeper}"
        end
+       FileUtils.rm(pid_path)
      rescue Errno::ESRCH
        @logger.debug "I tried to kill #{pid_keeper} but it appears it wasn't running."
+       FileUtils.rm(pid_path)
      end
    end
 
@@ -316,7 +322,7 @@ class Jettywrapper
 
    # The file where the process ID will be written
    def pid_file
-     @pid_file || jetty_home_to_pid_file(@jetty_home)
+     jetty_home_to_pid_file(@jetty_home)
    end
    
     # Take the @jetty_home value and transform it into a legal filename
@@ -334,7 +340,7 @@ class Jettywrapper
 
    # The directory where the pid_file will be written
    def pid_dir
-     File.expand_path(@pid_dir || File.join(@base_path,'tmp','pids'))
+     File.expand_path(File.join(@base_path,'tmp','pids'))
    end
    
    # Check to see if there is a pid file already
@@ -346,7 +352,7 @@ class Jettywrapper
 
    # the process id of the currently running jetty instance
    def pid
-      @pid || File.open( pid_path ) { |f| return f.gets.to_i } if File.exist?(pid_path)
+      File.open( pid_path ) { |f| return f.gets.to_i } if File.exist?(pid_path)
    end
    
 end

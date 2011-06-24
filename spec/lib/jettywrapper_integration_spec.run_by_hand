@@ -3,6 +3,7 @@ require File.join(File.dirname(__FILE__), "/../../lib/jettywrapper")
 require 'rubygems'
 require 'ruby-debug'
 require 'uri'
+require 'net/http'
 
 module Hydra
   describe Jettywrapper do    
@@ -66,18 +67,24 @@ module Hydra
         
         # Spin up two copies of jetty, with different jetty home values and on different ports
         Jettywrapper.start(jetty1_params) 
+        pid1 = Jettywrapper.pid(jetty1_params)
         Jettywrapper.start(jetty2_params) 
+        pid2 = Jettywrapper.pid(jetty2_params)
         
         # Ensure both are viable
-        sleep 30
+        sleep 20
         response1 = Net::HTTP.get_response(URI.parse("http://localhost:8983/solr/admin/"))
         response1.code.should eql("200")
         response2 = Net::HTTP.get_response(URI.parse("http://localhost:8984/solr/admin/"))
         response2.code.should eql("200")
         
         # Shut them both down
-        Jettywrapper.stop(jetty1_params) 
+        Jettywrapper.pid(jetty1_params).should eql(pid1)
+        Jettywrapper.stop(jetty1_params)
+        Jettywrapper.is_pid_running?(pid1).should eql(false)
+        Jettywrapper.pid(jetty2_params).should eql(pid2)
         Jettywrapper.stop(jetty2_params)
+        Jettywrapper.is_pid_running?(pid2).should eql(false)
       end
       
       it "raises an error if you try to start a jetty that is already running" do
