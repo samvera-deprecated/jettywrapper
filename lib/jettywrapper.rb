@@ -305,9 +305,6 @@ class Jettywrapper
           break if Jettywrapper.is_pid_running?(pid_keeper)==false
           sleep 2
        end
-       if Jettywrapper.is_pid_running?(pid_keeper)
-         raise "Couldn't kill process #{pid_keeper}"
-       end
        FileUtils.rm(pid_path)
      rescue Errno::ESRCH
        @logger.debug "I tried to kill #{pid_keeper} but it appears it wasn't running."
