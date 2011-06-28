@@ -72,7 +72,7 @@ module Hydra
         pid2 = Jettywrapper.pid(jetty2_params)
         
         # Ensure both are viable
-        sleep 20
+        sleep 40
         response1 = Net::HTTP.get_response(URI.parse("http://localhost:8983/solr/admin/"))
         response1.code.should eql("200")
         response2 = Net::HTTP.get_response(URI.parse("http://localhost:8984/solr/admin/"))

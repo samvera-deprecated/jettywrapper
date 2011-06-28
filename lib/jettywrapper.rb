@@ -301,7 +301,7 @@ class Jettywrapper
        pid_keeper = pid
        # Try to kill the process a few times to make sure it dies 
        3.times do
-          Process.kill('TERM',pid)
+          Process.kill(9,pid)
           break if Jettywrapper.is_pid_running?(pid_keeper)==false
           sleep 2
        end
