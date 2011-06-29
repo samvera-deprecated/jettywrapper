@@ -1,1 +1,1 @@
-GEMVERSION = "0.0.8"
+GEMVERSION = "0.0.9"
