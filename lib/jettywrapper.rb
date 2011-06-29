@@ -31,7 +31,7 @@ class Jettywrapper
     else
       @base_path = "."
     end
-    @logger = Logger.new("#{@base_path}/tmp/jettywrapper-debug.log")
+    @logger = Logger.new(STDERR)
     @logger.debug 'Initializing jettywrapper'
   end
   
