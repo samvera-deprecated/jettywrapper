@@ -20,7 +20,7 @@ Gem::Specification.new do |s|
   s.required_rubygems_version = ">= 1.3.6"
   
   s.add_dependency "logger"
-  s.add_dependency "loggable"
+  s.add_dependency "mediashelf-loggable"
   
   # Bundler will install these gems too if you've checked this out from source from git and run 'bundle install'
   # It will not add these as dependencies if you require lyber-core for other projects

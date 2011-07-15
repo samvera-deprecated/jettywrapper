@@ -58,6 +58,36 @@ bc..
   # %x[] or `` will return everything sent to stdout from the command
   puts %x[cucumber --tags ~@pending --tags ~@overwritten features]
   raise "Cucumber failed." unless $?.success?
+  
+h2. Testing the gem 
+
+If you haven't already, clone the git repository
+
+<pre>
+  git clone git@github.com:projecthydra/jettywrapper.git
+  cd jettywrapper
+</pre>
+
+If you're using RVM (recommended), use the .rvmrc
+
+<pre>
+  source .rvmrc
+  rvm list gemsets
+</pre>
+
+Install the gems and pull the submodules
+
+<pre>
+  bundle install
+  git submodule init
+  git submodule update
+</pre>
+
+Run the tests
+
+<pre>
+  rake 
+</pre>
 
 
 
