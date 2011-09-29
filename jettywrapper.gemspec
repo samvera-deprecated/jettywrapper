@@ -21,17 +21,13 @@ Gem::Specification.new do |s|
   
   s.add_dependency "logger"
   s.add_dependency "mediashelf-loggable"
+  s.add_dependency "childprocess"
   
   # Bundler will install these gems too if you've checked this out from source from git and run 'bundle install'
   # It will not add these as dependencies if you require lyber-core for other projects
   s.add_development_dependency "ruby-debug"
-  s.add_development_dependency "ruby-debug-base"
   s.add_development_dependency "rspec", "< 2.0" # We're not ready to upgrade to rspec 2
-  s.add_development_dependency 'rspec-rails', '<2.0.0' # rspec-rails 2.0.0 requires Rails 3.
   s.add_development_dependency 'mocha'
-  s.add_development_dependency 'cucumber', '>=0.8.5'
-  s.add_development_dependency 'cucumber-rails'
-  s.add_development_dependency 'gherkin'
   s.add_development_dependency 'rcov'
   
   s.add_development_dependency 'yard', '0.6.5'  # Yard > 0.6.5 won't generate docs.

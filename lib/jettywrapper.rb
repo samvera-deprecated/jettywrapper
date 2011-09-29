@@ -7,6 +7,7 @@ require 'ftools'
 require 'socket'
 require 'timeout'
 require 'ruby-debug'
+require 'childprocess'
 
 class Jettywrapper
   
@@ -22,6 +23,7 @@ class Jettywrapper
   attr_accessor :fedora_home  # Where is fedora located? Default is jetty_home/fedora
   attr_accessor :logger       # Where should logs be written?
   attr_accessor :base_path    # The root of the application. Used for determining where log files and PID files should go.
+  attr_accessor :java_opts    # Options to pass to java (ex. ["-Xmx512mb", "-Xms128mb"])
   
   # configure the singleton with some defaults
   def initialize(params = {})
@@ -31,6 +33,7 @@ class Jettywrapper
     else
       @base_path = "."
     end
+
     @logger = Logger.new(STDERR)
     @logger.debug 'Initializing jettywrapper'
   end
@@ -47,6 +50,7 @@ class Jettywrapper
     # @param [Symbol] :solr_home Where is solr? Default is jetty_home/solr
     # @param [Symbol] :fedora_home Where is fedora? Default is jetty_home/fedora/default
     # @param [Symbol] :quiet Keep quiet about jetty output? Default is true. 
+    # @param [Symbol] :java_opts A list of options to pass to the jvm 
     def configure(params = {})
       hydra_server = self.instance
       hydra_server.quiet = params[:quiet].nil? ? true : params[:quiet]
@@ -60,8 +64,10 @@ class Jettywrapper
       hydra_server.fedora_home = params[:fedora_home] || File.join( hydra_server.jetty_home, "fedora","default")
       hydra_server.port = params[:jetty_port] || 8888
       hydra_server.startup_wait = params[:startup_wait] || 5
+      hydra_server.java_opts = params[:java_opts] || []
       return hydra_server
     end
+   
      
     # Wrap the tests. Startup jetty, yield to the test task, capture any errors, shutdown
     # jetty, and return the error. 
@@ -192,9 +198,16 @@ class Jettywrapper
         
    # What command is being run to invoke jetty? 
    def jetty_command
-     "java -Djetty.port=#{@port} -Dsolr.solr.home=#{@solr_home} -Dfedora.home=#{@fedora_home} -jar start.jar"
+     opts = (java_variables + java_opts).join(' ')
+     "java #{opts} -jar start.jar"
    end
-   
+
+   def java_variables
+     ["-Djetty.port=#{@port}",
+      "-Dsolr.solr.home=#{@solr_home}",
+      "-Dfedora.home=#{@fedora_home}"]
+   end
+
    # Start the jetty server. Check the pid file to see if it is running already, 
    # and stop it if so. After you start jetty, write the PID to a file. 
    # This is the instance start method. It must be called on Jettywrapper.instance
@@ -225,7 +238,8 @@ class Jettywrapper
        end
      end
      Dir.chdir(@jetty_home) do
-       self.send "#{platform}_process".to_sym
+       process = build_process
+       @pid = process.pid
      end
      File.makedirs(pid_dir) unless File.directory?(pid_dir)
      begin
@@ -238,6 +252,12 @@ class Jettywrapper
      @logger.debug "Wrote pid file to #{pid_path} with value #{@pid}"
    end
  
+   def build_process
+     process = ChildProcess.build(jetty_command)
+     process.io.inherit!
+     process.detach = true
+     process.start
+   end
    # Instance stop method. Must be called on Jettywrapper.instance
    # You're probably better off using Jettywrapper.stop(:jetty_home => "/path/to/jetty")
    # @example
@@ -247,11 +267,10 @@ class Jettywrapper
    def stop    
      @logger.debug "Instance stop method called for pid #{pid}"
      if pid
-       begin
-         self.send "#{platform}_stop".to_sym
-       rescue Errno::ESRCH
-         @logger.error "I tried to kill the process #{pid} but it seems it wasn't running."
-       end
+       process = ChildProcess.new
+       process.instance_variable_set(:@pid, pid)
+       process.instance_variable_set(:@started, true)
+       process.stop 
        begin
          File.delete(pid_path)
        rescue
@@ -259,58 +278,6 @@ class Jettywrapper
      end
    end
  
-    # Spawn a process on windows
-    def win_process
-      @pid = Process.create(
-         :app_name         => jetty_command,
-         :creation_flags   => Process::DETACHED_PROCESS,
-         :process_inherit  => false,
-         :thread_inherit   => true,
-         :cwd              => "#{@jetty_home}"
-      ).process_id
-    end
-
-    # Determine whether we're running on windows or unix. We need to know this so 
-    # we know how to start and stop processes. 
-    def platform
-      case RUBY_PLATFORM
-        when /mswin32/
-           return 'win'
-        else
-           return 'nix'
-      end
-    end
-
-   def nix_process
-     @pid = fork do
-       # STDERR.close if @quiet
-       exec jetty_command
-     end
-   end
-
-   # stop jetty the windows way
-   def win_stop
-     Process.kill(1, pid)
-   end
-
-   # stop jetty the *nix way
-   def nix_stop
-     @logger.debug "Attempting to kill process id #{pid}."
-     return nil if pid == nil
-     begin
-       pid_keeper = pid
-       # Try to kill the process a few times to make sure it dies 
-       3.times do
-          Process.kill(9,pid)
-          break if Jettywrapper.is_pid_running?(pid_keeper)==false
-          sleep 2
-       end
-       FileUtils.rm(pid_path)
-     rescue Errno::ESRCH
-       @logger.debug "I tried to kill #{pid_keeper} but it appears it wasn't running."
-       FileUtils.rm(pid_path)
-     end
-   end
 
    # The fully qualified path to the pid_file
    def pid_path

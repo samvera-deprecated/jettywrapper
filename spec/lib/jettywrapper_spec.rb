@@ -15,7 +15,8 @@ module Hydra
         :jetty_port => 8888,
         :solr_home => "/path/to/solr",
         :fedora_home => "/path/to/fedora",
-        :startup_wait => 0
+        :startup_wait => 0,
+        :java_opts => ["-Xmx256mb"]
       }
     end
     
@@ -65,6 +66,7 @@ module Hydra
         command.should include("-Dfedora.home=#{@jetty_params[:fedora_home]}")
         command.should include("-Dsolr.solr.home=#{@jetty_params[:solr_home]}")
         command.should include("-Djetty.port=#{@jetty_params[:jetty_port]}")
+        command.should include("-Xmx256mb")
         
       end
       
@@ -73,7 +75,7 @@ module Hydra
           :jetty_home => '/tmp'
         }
         ts = Jettywrapper.configure(jetty_params) 
-        Jettywrapper.any_instance.stubs(:fork).returns(5454)
+        Jettywrapper.any_instance.stubs(:build_process).returns(stub('proc', :pid=>5454))
         ts.stop
         ts.start
         ts.pid.should eql(5454)
@@ -86,7 +88,7 @@ module Hydra
         }
         ts = Jettywrapper.configure(jetty_params) 
         ts.stop
-        Jettywrapper.any_instance.stubs(:fork).returns(2323)
+        Jettywrapper.any_instance.stubs(:build_process).returns(stub('proc', :pid=>2323))
         swp = Jettywrapper.start(jetty_params)
         swp.pid.should eql(2323)
         swp.pid_file.should eql("_tmp.pid")
@@ -100,10 +102,10 @@ module Hydra
       # return true if it's running, otherwise return false
       it "can get the status for a given jetty instance" do
         # Don't actually start jetty, just fake it
-        Jettywrapper.any_instance.stubs(:fork).returns(12345)
+        Jettywrapper.any_instance.stubs(:build_process).returns(stub('proc', :pid=>12345))
         
         jetty_params = {
-          :jetty_home => File.expand_path("#{File.dirname(__FILE__)}/../../jetty1")
+          :jetty_home => File.expand_path("#{File.dirname(__FILE__)}/../../jetty")
         }
         Jettywrapper.stop(jetty_params)
         Jettywrapper.is_jetty_running?(jetty_params).should eql(false)
@@ -114,9 +116,9 @@ module Hydra
       
       it "can get the pid for a given jetty instance" do
         # Don't actually start jetty, just fake it
-        Jettywrapper.any_instance.stubs(:fork).returns(54321)
+        Jettywrapper.any_instance.stubs(:build_process).returns(stub('proc', :pid=>54321))
         jetty_params = {
-          :jetty_home => File.expand_path("#{File.dirname(__FILE__)}/../../jetty1")
+          :jetty_home => File.expand_path("#{File.dirname(__FILE__)}/../../jetty")
         }
         Jettywrapper.stop(jetty_params)
         Jettywrapper.pid(jetty_params).should eql(nil)
@@ -129,7 +131,7 @@ module Hydra
         jetty_params = {
           :jetty_home => '/tmp', :jetty_port => 8777
         }
-        Jettywrapper.any_instance.stubs(:fork).returns(2323)
+        Jettywrapper.any_instance.stubs(:build_process).returns(stub('proc', :pid=>2323))
         swp = Jettywrapper.start(jetty_params)
         (File.file? swp.pid_path).should eql(true)
         
@@ -152,7 +154,7 @@ module Hydra
           :jetty_home => '/tmp'
         }
         ts = Jettywrapper.configure(jetty_params) 
-        Jettywrapper.any_instance.stubs(:fork).returns(2222)
+        Jettywrapper.any_instance.stubs(:build_process).returns(stub('proc', :pid=>2222))
         ts.stop
         ts.pid_file?.should eql(false)
         ts.start

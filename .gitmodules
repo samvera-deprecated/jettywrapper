@@ -1,6 +1,3 @@
-[submodule "jetty1"]
-	path = jetty1
-	url = git://github.com/projecthydra/hydra-jetty.git
-[submodule "jetty2"]
-	path = jetty2
+[submodule "jetty"]
+	path = jetty
 	url = git://github.com/projecthydra/hydra-jetty.git
