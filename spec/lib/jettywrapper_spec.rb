@@ -14,7 +14,6 @@ module Hydra
         :jetty_home => "/path/to/jetty",
         :jetty_port => 8888,
         :solr_home => "/path/to/solr",
-        :fedora_home => "/path/to/fedora",
         :startup_wait => 0,
         :java_opts => ["-Xmx256mb"]
       }
@@ -32,7 +31,6 @@ module Hydra
         ts.jetty_home.should == "/path/to/jetty"
         ts.port.should == 8888
         ts.solr_home.should == '/path/to/solr'
-        ts.fedora_home.should == '/path/to/fedora'
         ts.startup_wait.should == 0
       end
 
@@ -47,7 +45,6 @@ module Hydra
           :jetty_home => '/path/to/jetty',
           :jetty_port => nil,
           :solr_home => nil,
-          :fedora_home => nil,
           :startup_wait => nil
         }
 
@@ -56,14 +53,12 @@ module Hydra
         ts.jetty_home.should == "/path/to/jetty"
         ts.port.should == 8888
         ts.solr_home.should == File.join(ts.jetty_home, "solr")
-        ts.fedora_home.should == File.join(ts.jetty_home, "fedora","default")
         ts.startup_wait.should == 5
       end
       
       it "passes all the expected values to jetty during startup" do
         ts = Jettywrapper.configure(@jetty_params) 
         command = ts.jetty_command
-        command.should include("-Dfedora.home=#{@jetty_params[:fedora_home]}")
         command.should include("-Dsolr.solr.home=#{@jetty_params[:solr_home]}")
         command.should include("-Djetty.port=#{@jetty_params[:jetty_port]}")
         command.should include("-Xmx256mb")
@@ -192,7 +187,6 @@ module Hydra
           ts.jetty_home.should == "/path/to/jetty"
           ts.port.should == 8888
           ts.solr_home.should == "/path/to/solr"
-          ts.fedora_home.should == "/path/to/fedora"
           ts.startup_wait.should == 0     
         end
         error.should eql(false)

@@ -20,7 +20,6 @@ class Jettywrapper
   attr_accessor :startup_wait # After jetty starts, how long to wait until starting the tests? 
   attr_accessor :quiet        # Keep quiet about jetty output?
   attr_accessor :solr_home    # Where is solr located? Default is jetty_home/solr
-  attr_accessor :fedora_home  # Where is fedora located? Default is jetty_home/fedora
   attr_accessor :logger       # Where should logs be written?
   attr_accessor :base_path    # The root of the application. Used for determining where log files and PID files should go.
   attr_accessor :java_opts    # Options to pass to java (ex. ["-Xmx512mb", "-Xms128mb"])
@@ -48,7 +47,6 @@ class Jettywrapper
     # @param [Symbol] :jetty_port What port should jetty start on? Default is 8888
     # @param [Symbol] :startup_wait After jetty starts, how long to wait before running tests? If you don't let jetty start all the way before running the tests, they'll fail because they can't reach jetty.
     # @param [Symbol] :solr_home Where is solr? Default is jetty_home/solr
-    # @param [Symbol] :fedora_home Where is fedora? Default is jetty_home/fedora/default
     # @param [Symbol] :quiet Keep quiet about jetty output? Default is true. 
     # @param [Symbol] :java_opts A list of options to pass to the jvm 
     def configure(params = {})
@@ -61,7 +59,6 @@ class Jettywrapper
       end
       hydra_server.jetty_home = params[:jetty_home] || File.expand_path(File.join(base_path, 'jetty'))
       hydra_server.solr_home = params[:solr_home]  || File.join( hydra_server.jetty_home, "solr")
-      hydra_server.fedora_home = params[:fedora_home] || File.join( hydra_server.jetty_home, "fedora","default")
       hydra_server.port = params[:jetty_port] || 8888
       hydra_server.startup_wait = params[:startup_wait] || 5
       hydra_server.java_opts = params[:java_opts] || []
@@ -95,7 +92,6 @@ class Jettywrapper
       jetty_server.solr_home = params[:solr_home]
       jetty_server.port = params[:jetty_port] || 8888
       jetty_server.startup_wait = params[:startup_wait] || 5
-      jetty_server.fedora_home = params[:fedora_home] || File.join( jetty_server.jetty_home, "fedora","default")
 
       begin
         # puts "starting jetty on #{RUBY_PLATFORM}"
@@ -204,8 +200,7 @@ class Jettywrapper
 
    def java_variables
      ["-Djetty.port=#{@port}",
-      "-Dsolr.solr.home=#{@solr_home}",
-      "-Dfedora.home=#{@fedora_home}"]
+      "-Dsolr.solr.home=#{@solr_home}"]
    end
 
    # Start the jetty server. Check the pid file to see if it is running already, 
@@ -220,7 +215,6 @@ class Jettywrapper
      @logger.debug "Starting jetty with these values: "
      @logger.debug "jetty_home: #{@jetty_home}"
      @logger.debug "solr_home: #{@solr_home}"
-     @logger.debug "fedora_home: #{@fedora_home}"
      @logger.debug "jetty_command: #{jetty_command}"
      
      # Check to see if we can start.
