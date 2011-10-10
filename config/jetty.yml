@@ -1,0 +1,4 @@
+jetty_port: 8983
+java_opts:
+  - "-Xmx128mb"
+

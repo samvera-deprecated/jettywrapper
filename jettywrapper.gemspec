@@ -22,6 +22,7 @@ Gem::Specification.new do |s|
   s.add_dependency "logger"
   s.add_dependency "mediashelf-loggable"
   s.add_dependency "childprocess"
+  s.add_dependency "activesupport", ">=3.0.0"
   
   # Bundler will install these gems too if you've checked this out from source from git and run 'bundle install'
   # It will not add these as dependencies if you require lyber-core for other projects

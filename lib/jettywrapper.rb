@@ -1,13 +1,14 @@
 # Jettywrapper is a Singleton class, so you can only create one jetty instance at a time.
-require 'rubygems'
-require 'logger'
+#require 'logger'
 require 'loggable'
 require 'singleton'
 require 'ftools'
 require 'socket'
 require 'timeout'
-require 'ruby-debug'
 require 'childprocess'
+
+Dir[File.expand_path(File.join(File.dirname(__FILE__),"tasks/*.rake"))].each { |ext| puts "EXT: #{ext}"; load ext } if defined?(Rake)
+
 
 class Jettywrapper
   
@@ -20,21 +21,18 @@ class Jettywrapper
   attr_accessor :startup_wait # After jetty starts, how long to wait until starting the tests? 
   attr_accessor :quiet        # Keep quiet about jetty output?
   attr_accessor :solr_home    # Where is solr located? Default is jetty_home/solr
-  attr_accessor :logger       # Where should logs be written?
   attr_accessor :base_path    # The root of the application. Used for determining where log files and PID files should go.
   attr_accessor :java_opts    # Options to pass to java (ex. ["-Xmx512mb", "-Xms128mb"])
   
   # configure the singleton with some defaults
   def initialize(params = {})
-    # @pid = nil
     if defined?(Rails.root)
       @base_path = Rails.root
     else
       @base_path = "."
     end
 
-    @logger = Logger.new(STDERR)
-    @logger.debug 'Initializing jettywrapper'
+    logger.debug 'Initializing jettywrapper'
   end
   
   # Methods inside of the class << self block can be called directly on Jettywrapper, as class methods. 
@@ -212,10 +210,10 @@ class Jettywrapper
    #    Jettywrapper.instance.start
    #    return Jettywrapper.instance
    def start
-     @logger.debug "Starting jetty with these values: "
-     @logger.debug "jetty_home: #{@jetty_home}"
-     @logger.debug "solr_home: #{@solr_home}"
-     @logger.debug "jetty_command: #{jetty_command}"
+     logger.debug "Starting jetty with these values: "
+     logger.debug "jetty_home: #{@jetty_home}"
+     logger.debug "solr_home: #{@solr_home}"
+     logger.debug "jetty_command: #{jetty_command}"
      
      # Check to see if we can start.
      # 1. If there is a pid, check to see if it is really running
@@ -224,7 +222,7 @@ class Jettywrapper
        if Jettywrapper.is_pid_running?(pid)
          raise("Server is already running with PID #{pid}")
        else
-         @logger.warn "Removing stale PID file at #{pid_path}"
+         logger.warn "Removing stale PID file at #{pid_path}"
          File.delete(pid_path)
        end
        if Jettywrapper.is_port_in_use?(@jetty_port)
@@ -243,7 +241,7 @@ class Jettywrapper
      end
      f.puts "#{@pid}"
      f.close
-     @logger.debug "Wrote pid file to #{pid_path} with value #{@pid}"
+     logger.debug "Wrote pid file to #{pid_path} with value #{@pid}"
    end
  
    def build_process
@@ -259,7 +257,7 @@ class Jettywrapper
    #    Jettywrapper.instance.stop
    #    return Jettywrapper.instance
    def stop    
-     @logger.debug "Instance stop method called for pid #{pid}"
+     logger.debug "Instance stop method called for pid #{pid}"
      if pid
        process = ChildProcess.new
        process.instance_variable_set(:@pid, pid)
