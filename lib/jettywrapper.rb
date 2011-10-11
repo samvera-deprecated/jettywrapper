@@ -6,8 +6,9 @@ require 'ftools'
 require 'socket'
 require 'timeout'
 require 'childprocess'
+require 'active_support/core_ext/hash'
 
-Dir[File.expand_path(File.join(File.dirname(__FILE__),"tasks/*.rake"))].each { |ext| puts "EXT: #{ext}"; load ext } if defined?(Rake)
+Dir[File.expand_path(File.join(File.dirname(__FILE__),"tasks/*.rake"))].each { |ext| load ext } if defined?(Rake)
 
 
 class Jettywrapper
@@ -39,6 +40,27 @@ class Jettywrapper
   # Methods outside the class << self block must be called on Jettywrapper.instance, as instance methods.
   class << self
     
+    def load_config
+      if defined? Rails 
+        config_name =  Rails.env 
+        app_root = Rails.root
+      else 
+        config_name =  ENV['environment']
+        app_root = ENV['APP_ROOT']
+        app_root ||= '.'
+      end
+      filename = "#{app_root}/config/jetty.yml"
+      begin
+        file = YAML.load_file(filename)
+      rescue Exception => e
+        logger.warn "Didn't find expected jettywrapper config file at #{filename}, using default file instead."
+        file ||= YAML.load_file(File.join(File.dirname(__FILE__),"../config/jetty.yml"))
+        #raise "Unable to load: #{file}" unless file
+      end
+      file.with_indifferent_access
+    end
+    
+
     # Set the jetty parameters. It accepts a Hash of symbols. 
     # @param [Hash<Symbol>] params
     # @param [Symbol] :jetty_home Required. Where is jetty located? 
@@ -86,12 +108,13 @@ class Jettywrapper
     #   end
     def wrap(params)
       error = false
-      jetty_server = self.instance
-      jetty_server.quiet = params[:quiet] || true
-      jetty_server.jetty_home = params[:jetty_home]
-      jetty_server.solr_home = params[:solr_home]
-      jetty_server.port = params[:jetty_port] || 8888
-      jetty_server.startup_wait = params[:startup_wait] || 5
+      jetty_server = self.configure(params)
+      # jetty_server = self.instance
+      # jetty_server.quiet = params[:quiet] || true
+      # jetty_server.jetty_home = params[:jetty_home]
+      # jetty_server.solr_home = params[:solr_home]
+      # jetty_server.port = params[:jetty_port] || 8888
+      # jetty_server.startup_wait = params[:startup_wait] || 5
 
       begin
         # puts "starting jetty on #{RUBY_PLATFORM}"

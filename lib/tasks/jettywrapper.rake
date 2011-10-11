@@ -1,6 +1,5 @@
 ## These tasks get loaded into the host application when jettywrapper is required
 require 'yaml'
-require 'active_support/core_ext/hash'
 
 namespace :jetty do
   
@@ -31,24 +30,8 @@ namespace :jetty do
 
   desc "Load the jetty config"
   task :environment do
-    unless Kernel.const_defined? "JETTY_CONFIG"
-      if Kernel.const_defined? "Rails" 
-        config_name =  Rails.env 
-        app_root = Rails.root
-      else 
-        config_name =  ENV['environment']
-        app_root = ENV['APP_ROOT']
-        app_root ||= '.'
-      end
-      filename = "#{app_root}/config/jetty.yml"
-      begin
-        file = YAML.load_file(filename)
-      rescue Exception => e
-        logger.warn "Didn't find expected jettywrapper config file at #{filename}, using default file instead."
-        file ||= YAML.load_file(File.join(File.dirname(__FILE__),"../../config/jetty.yml"))
-        #raise "Unable to load: #{file}" unless file
-      end
-      JETTY_CONFIG = file.with_indifferent_access
+    unless defined? JETTY_CONFIG
+      JETTY_CONFIG = Jettywrapper.load_config
     end
   end
 
