@@ -52,8 +52,10 @@ class Jettywrapper
       hydra_server.quiet = params[:quiet].nil? ? true : params[:quiet]
       if defined?(Rails.root)
        base_path = Rails.root
+      elsif defined?(APP_ROOT)
+       base_path = APP_ROOT
       else
-       raise "You must set either RAILS_ROOT or :jetty_home so I know where jetty is" unless params[:jetty_home]
+       raise "You must set either Rails.root, APP_ROOT or pass :jetty_home as a parameter so I know where jetty is" unless params[:jetty_home]
       end
       hydra_server.jetty_home = params[:jetty_home] || File.expand_path(File.join(base_path, 'jetty'))
       hydra_server.solr_home = params[:solr_home]  || File.join( hydra_server.jetty_home, "solr")
