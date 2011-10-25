@@ -2,7 +2,7 @@
 #require 'logger'
 require 'loggable'
 require 'singleton'
-require 'ftools'
+require 'fileutils'
 require 'socket'
 require 'timeout'
 require 'childprocess'
@@ -258,7 +258,7 @@ class Jettywrapper
        process = build_process
        @pid = process.pid
      end
-     File.makedirs(pid_dir) unless File.directory?(pid_dir)
+     FileUtils.makedirs(pid_dir) unless File.directory?(pid_dir)
      begin
        f = File.new(pid_path,  "w")
      rescue Errno::ENOENT, Errno::EACCES
