@@ -181,7 +181,7 @@ module Hydra
         Jettywrapper.any_instance.stubs(:stop).returns(true)
         error = Jettywrapper.wrap(@jetty_params) do 
           ts = Jettywrapper.instance 
-          ts.quiet.should == true
+          ts.quiet.should == @jetty_params[:quiet]
           ts.jetty_home.should == "/path/to/jetty"
           ts.port.should == 8888
           ts.solr_home.should == "/path/to/solr"
