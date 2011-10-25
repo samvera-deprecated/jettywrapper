@@ -1,7 +1,5 @@
-require File.join(File.dirname(__FILE__), "/../spec_helper")
-require File.join(File.dirname(__FILE__), "/../../lib/jettywrapper")
+require 'spec_helper'
 require 'rubygems'
-require 'ruby-debug'
 
 module Hydra
   describe Jettywrapper do

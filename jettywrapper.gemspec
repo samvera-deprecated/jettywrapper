@@ -27,7 +27,6 @@ Gem::Specification.new do |s|
   
   # Bundler will install these gems too if you've checked this out from source from git and run 'bundle install'
   # It will not add these as dependencies if you require lyber-core for other projects
-  s.add_development_dependency "ruby-debug"
   s.add_development_dependency "rspec", "< 2.0" # We're not ready to upgrade to rspec 2
   s.add_development_dependency 'mocha'
   s.add_development_dependency 'rcov'
