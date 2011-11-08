@@ -60,7 +60,12 @@ module Hydra
         command.should include("-Dsolr.solr.home=#{@jetty_params[:solr_home]}")
         command.should include("-Djetty.port=#{@jetty_params[:jetty_port]}")
         command.should include("-Xmx256mb")
-        
+      end
+
+      it "escapes the :solr_home parameter" do
+        ts = Jettywrapper.configure(@jetty_params.merge(:solr_home => '/path with spaces/to/solr'))
+        command = ts.jetty_command
+        command.should include("-Dsolr.solr.home=/path\\ with\\ spaces/to/solr")
       end
       
       it "has a pid if it has been started" do
