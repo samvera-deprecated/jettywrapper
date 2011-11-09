@@ -3,6 +3,7 @@
 require 'loggable'
 require 'singleton'
 require 'fileutils'
+require 'shellwords'
 require 'socket'
 require 'timeout'
 require 'childprocess'
@@ -223,7 +224,7 @@ class Jettywrapper
 
    def java_variables
      ["-Djetty.port=#{@port}",
-      "-Dsolr.solr.home=#{@solr_home}"]
+      "-Dsolr.solr.home=#{Shellwords.escape(@solr_home)}"]
    end
 
    # Start the jetty server. Check the pid file to see if it is running already, 
