@@ -1,5 +1,4 @@
 # Jettywrapper is a Singleton class, so you can only create one jetty instance at a time.
-#require 'logger'
 require 'loggable'
 require 'singleton'
 require 'fileutils'
@@ -17,7 +16,6 @@ class Jettywrapper
   include Singleton
   include Loggable
   
-  attr_accessor :pid          # If Jettywrapper is running, what pid is it running as? 
   attr_accessor :port         # What port should jetty start on? Default is 8888
   attr_accessor :jetty_home   # Where is jetty located? 
   attr_accessor :startup_wait # After jetty starts, how long to wait until starting the tests? 
@@ -110,15 +108,8 @@ class Jettywrapper
     def wrap(params)
       error = false
       jetty_server = self.configure(params)
-      # jetty_server = self.instance
-      # jetty_server.quiet = params[:quiet] || true
-      # jetty_server.jetty_home = params[:jetty_home]
-      # jetty_server.solr_home = params[:solr_home]
-      # jetty_server.port = params[:jetty_port] || 8888
-      # jetty_server.startup_wait = params[:startup_wait] || 5
 
       begin
-        # puts "starting jetty on #{RUBY_PLATFORM}"
         jetty_server.start
         sleep jetty_server.startup_wait
         yield
@@ -136,7 +127,7 @@ class Jettywrapper
     # Convenience method for configuring and starting jetty with one command
     # @param [Hash] params: The configuration to use for starting jetty
     # @example 
-    #    Jettywrapper.start_with_params(:jetty_home => '/path/to/jetty', :jetty_port => '8983')
+    #    Jettywrapper.start(:jetty_home => '/path/to/jetty', :jetty_port => '8983')
     def start(params)
        Jettywrapper.configure(params)
        Jettywrapper.instance.start
@@ -283,7 +274,7 @@ class Jettywrapper
    #    Jettywrapper.instance.stop
    #    return Jettywrapper.instance
    def stop    
-     logger.debug "Instance stop method called for pid #{pid}"
+     logger.debug "Instance stop method called for pid '#{pid}'"
      if pid
        process = ChildProcess.new
        process.instance_variable_set(:@pid, pid)
@@ -299,7 +290,8 @@ class Jettywrapper
 
    # The fully qualified path to the pid_file
    def pid_path
-     File.join(pid_dir, pid_file)
+     #need to memoize this, becasuse the base path could be relative and the cwd can change in the yield block of wrap
+     @path ||= File.join(pid_dir, pid_file)
    end
 
    # The file where the process ID will be written
