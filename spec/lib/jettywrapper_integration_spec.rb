@@ -76,9 +76,7 @@ module Hydra
         lambda{ ts.start }.should raise_exception
         ts.stop
       end
-      
-      
+
     end
-    
   end
 end
