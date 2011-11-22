@@ -70,6 +70,7 @@ class Jettywrapper
     # @param [Symbol] :java_opts A list of options to pass to the jvm 
     def configure(params = {})
       hydra_server = self.instance
+      hydra_server.reset_process!
       hydra_server.quiet = params[:quiet].nil? ? true : params[:quiet]
       if defined?(Rails.root)
        base_path = Rails.root
@@ -247,8 +248,7 @@ class Jettywrapper
        end
      end
      Dir.chdir(@jetty_home) do
-       process = build_process
-       @pid = process.pid
+       process.start
      end
      FileUtils.makedirs(pid_dir) unless File.directory?(pid_dir)
      begin
@@ -256,16 +256,29 @@ class Jettywrapper
      rescue Errno::ENOENT, Errno::EACCES
        f = File.new(File.join(@base_path,'tmp',pid_file),"w")
      end
-     f.puts "#{@pid}"
+     f.puts "#{process.pid}"
      f.close
-     logger.debug "Wrote pid file to #{pid_path} with value #{@pid}"
+     logger.debug "Wrote pid file to #{pid_path} with value #{process.pid}"
    end
  
-   def build_process
-     process = ChildProcess.build(jetty_command)
-     process.io.inherit!
-     process.detach = true
-     process.start
+   def process
+     @process ||= begin
+        process = ChildProcess.build(jetty_command)
+        if self.quiet
+          process.io.stderr = File.open("jettywrapper.log", "w+")
+          process.io.stdout = process.io.stderr
+           logger.warn "Logging jettywrapper stdout to #{File.expand_path(process.io.stderr.path)}"
+        else
+          process.io.inherit!
+        end
+        process.detach = true
+
+        process
+      end
+   end
+
+   def reset_process!
+     @process = nil
    end
    # Instance stop method. Must be called on Jettywrapper.instance
    # You're probably better off using Jettywrapper.stop(:jetty_home => "/path/to/jetty")
@@ -279,6 +292,7 @@ class Jettywrapper
        process = ChildProcess.new
        process.instance_variable_set(:@pid, pid)
        process.instance_variable_set(:@started, true)
+
        process.stop 
        begin
          File.delete(pid_path)

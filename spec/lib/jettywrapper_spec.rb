@@ -73,7 +73,7 @@ module Hydra
           :jetty_home => '/tmp'
         }
         ts = Jettywrapper.configure(jetty_params) 
-        Jettywrapper.any_instance.stubs(:build_process).returns(stub('proc', :pid=>5454))
+        Jettywrapper.any_instance.stubs(:process).returns(stub('proc', :start => nil, :pid=>5454))
         ts.stop
         ts.start
         ts.pid.should eql(5454)
@@ -86,7 +86,7 @@ module Hydra
         }
         ts = Jettywrapper.configure(jetty_params) 
         ts.stop
-        Jettywrapper.any_instance.stubs(:build_process).returns(stub('proc', :pid=>2323))
+        Jettywrapper.any_instance.stubs(:process).returns(stub('proc', :start => nil, :pid=>2323))
         swp = Jettywrapper.start(jetty_params)
         swp.pid.should eql(2323)
         swp.pid_file.should eql("_tmp.pid")
@@ -100,7 +100,7 @@ module Hydra
       # return true if it's running, otherwise return false
       it "can get the status for a given jetty instance" do
         # Don't actually start jetty, just fake it
-        Jettywrapper.any_instance.stubs(:build_process).returns(stub('proc', :pid=>12345))
+        Jettywrapper.any_instance.stubs(:process).returns(stub('proc', :start => nil, :pid=>12345))
         
         jetty_params = {
           :jetty_home => File.expand_path("#{File.dirname(__FILE__)}/../../jetty")
@@ -114,7 +114,7 @@ module Hydra
       
       it "can get the pid for a given jetty instance" do
         # Don't actually start jetty, just fake it
-        Jettywrapper.any_instance.stubs(:build_process).returns(stub('proc', :pid=>54321))
+        Jettywrapper.any_instance.stubs(:process).returns(stub('proc', :start => nil, :pid=>54321))
         jetty_params = {
           :jetty_home => File.expand_path("#{File.dirname(__FILE__)}/../../jetty")
         }
@@ -129,7 +129,7 @@ module Hydra
         jetty_params = {
           :jetty_home => '/tmp', :jetty_port => 8777
         }
-        Jettywrapper.any_instance.stubs(:build_process).returns(stub('proc', :pid=>2323))
+        Jettywrapper.any_instance.stubs(:process).returns(stub('proc', :start => nil, :pid=>2323))
         swp = Jettywrapper.start(jetty_params)
         (File.file? swp.pid_path).should eql(true)
         
@@ -152,7 +152,7 @@ module Hydra
           :jetty_home => '/tmp'
         }
         ts = Jettywrapper.configure(jetty_params) 
-        Jettywrapper.any_instance.stubs(:build_process).returns(stub('proc', :pid=>2222))
+        Jettywrapper.any_instance.stubs(:process).returns(stub('proc', :start => nil, :pid=>2222))
         ts.stop
         ts.pid_file?.should eql(false)
         ts.start
@@ -206,5 +206,21 @@ module Hydra
       end
       
     end # end of wrapping context
+
+    context "quiet mode", :quiet => true do
+      it "inherits the current stderr/stdout in 'loud' mode" do
+        ts = Jettywrapper.configure(@jetty_params.merge(:quiet => false))
+        process = ts.process
+        process.io.stderr.should == $stderr
+        process.io.stdout.should == $stdout
+      end
+
+      it "redirect stderr/stdout to a log file in quiet mode" do
+        ts = Jettywrapper.configure(@jetty_params.merge(:quiet => true))
+        process = ts.process
+        process.io.stderr.should_not == $stderr
+        process.io.stdout.should_not == $stdout
+      end
+    end
   end
 end
