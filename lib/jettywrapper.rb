@@ -263,7 +263,13 @@ class Jettywrapper
  
    def build_process
      process = ChildProcess.build(jetty_command)
-     process.io.inherit!
+     if self.quiet
+       process.io.stderr = File.open("jettywrapper.log", "w+")
+       process.io.stdout = process.io.stderr
+       logger.warn "Logging jettywrapper stdout to #{File.expand_path(process.io.stderr.path)}"
+     else
+       process.io.inherit!
+     end
      process.detach = true
      process.start
    end
