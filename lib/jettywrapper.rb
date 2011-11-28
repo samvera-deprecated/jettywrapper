@@ -288,11 +288,12 @@ class Jettywrapper
    def stop    
      logger.debug "Instance stop method called for pid '#{pid}'"
      if pid
-       process = ChildProcess.new
-       process.instance_variable_set(:@pid, pid)
-       process.instance_variable_set(:@started, true)
+       if @process
+         @process.stop
+       else
+         Process.kill("KILL", pid) rescue nil
+       end
 
-       process.stop 
        begin
          File.delete(pid_path)
        rescue
