@@ -210,8 +210,7 @@ class Jettywrapper
         
    # What command is being run to invoke jetty? 
    def jetty_command
-     opts = (java_variables + java_opts).join(' ')
-     "java #{opts} -jar start.jar"
+     ["java", java_variables, java_opts, "-jar", "start.jar"].flatten
    end
 
    def java_variables
@@ -231,7 +230,7 @@ class Jettywrapper
      logger.debug "Starting jetty with these values: "
      logger.debug "jetty_home: #{@jetty_home}"
      logger.debug "solr_home: #{@solr_home}"
-     logger.debug "jetty_command: #{jetty_command}"
+     logger.debug "jetty_command: #{jetty_command.join(' ')}"
      
      # Check to see if we can start.
      # 1. If there is a pid, check to see if it is really running
@@ -263,7 +262,7 @@ class Jettywrapper
  
    def process
      @process ||= begin
-        process = ChildProcess.build(jetty_command)
+        process = ChildProcess.build(*jetty_command)
         if self.quiet
           process.io.stderr = File.open("jettywrapper.log", "w+")
           process.io.stdout = process.io.stderr
