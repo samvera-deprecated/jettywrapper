@@ -113,7 +113,6 @@ class Jettywrapper
 
       begin
         jetty_server.start
-        sleep jetty_server.startup_wait
         yield
       rescue
         error = $!
@@ -259,6 +258,12 @@ class Jettywrapper
      f.puts "#{process.pid}"
      f.close
      logger.debug "Wrote pid file to #{pid_path} with value #{process.pid}"
+     startup_wait!
+   end
+
+   # Wait for the jetty server to start and begin listening for requests
+   def startup_wait!
+     sleep startup_wait
    end
  
    def process
