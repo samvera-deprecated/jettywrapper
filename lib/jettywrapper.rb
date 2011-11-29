@@ -7,7 +7,6 @@ require 'socket'
 require 'timeout'
 require 'childprocess'
 require 'active_support/core_ext/hash'
-require 'file/tail'
 
 Dir[File.expand_path(File.join(File.dirname(__FILE__),"tasks/*.rake"))].each { |ext| load ext } if defined?(Rake)
 
