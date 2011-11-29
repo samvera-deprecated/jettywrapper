@@ -7,6 +7,7 @@ require 'socket'
 require 'timeout'
 require 'childprocess'
 require 'active_support/core_ext/hash'
+require 'file/tail'
 
 Dir[File.expand_path(File.join(File.dirname(__FILE__),"tasks/*.rake"))].each { |ext| load ext } if defined?(Rake)
 
@@ -23,6 +24,7 @@ class Jettywrapper
   attr_accessor :solr_home    # Where is solr located? Default is jetty_home/solr
   attr_accessor :base_path    # The root of the application. Used for determining where log files and PID files should go.
   attr_accessor :java_opts    # Options to pass to java (ex. ["-Xmx512mb", "-Xms128mb"])
+  attr_accessor :port         # The port jetty should listen on
   
   # configure the singleton with some defaults
   def initialize(params = {})
@@ -113,7 +115,6 @@ class Jettywrapper
 
       begin
         jetty_server.start
-        sleep jetty_server.startup_wait
         yield
       rescue
         error = $!
@@ -243,8 +244,8 @@ class Jettywrapper
          logger.warn "Removing stale PID file at #{pid_path}"
          File.delete(pid_path)
        end
-       if Jettywrapper.is_port_in_use?(@jetty_port)
-         raise("Port #{self.jetty_port} is already in use.")
+       if Jettywrapper.is_port_in_use?(self.port)
+         raise("Port #{self.port} is already in use.")
        end
      end
      Dir.chdir(@jetty_home) do
@@ -259,13 +260,25 @@ class Jettywrapper
      f.puts "#{process.pid}"
      f.close
      logger.debug "Wrote pid file to #{pid_path} with value #{process.pid}"
+     startup_wait!
+   end
+
+   # Wait for the jetty server to start and begin listening for requests
+   def startup_wait!
+     begin
+     Timeout::timeout(startup_wait) do
+       sleep 1 until (Jettywrapper.is_port_in_use? self.port)
+     end 
+     rescue Timeout::Error
+       logger.warn "Waited #{startup_wait} seconds for jetty to start, but it is not yet listening on port #{self.port}. Continuing anyway."
+     end
    end
  
    def process
      @process ||= begin
         process = ChildProcess.build(*jetty_command)
         if self.quiet
-          process.io.stderr = File.open("jettywrapper.log", "w+")
+          process.io.stderr = File.open(File.expand_path("jettywrapper.log"), "w+")
           process.io.stdout = process.io.stderr
            logger.warn "Logging jettywrapper stdout to #{File.expand_path(process.io.stderr.path)}"
         else
