@@ -56,7 +56,8 @@ class Jettywrapper
         file ||= YAML.load_file(File.join(File.dirname(__FILE__),"../config/jetty.yml"))
         #raise "Unable to load: #{file}" unless file
       end
-      file.with_indifferent_access
+      config = file.with_indifferent_access
+      config[config_name] || config[:default]
     end
     
 
