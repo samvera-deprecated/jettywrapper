@@ -1,2 +1,6 @@
+1.2.0
+  Added per environment configuration
+  Fixes for JRuby
+
 1.1.0
   Added quiet mode, so you don't see log messages on jetty startup.
