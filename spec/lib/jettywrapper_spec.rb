@@ -1,7 +1,6 @@
 require 'spec_helper'
 require 'rubygems'
 
-module Hydra
   describe Jettywrapper do
     
     # JETTY1 = 
@@ -15,6 +14,34 @@ module Hydra
         :startup_wait => 0,
         :java_opts => ["-Xmx256mb"]
       }
+    end
+
+    context "config" do
+      it "loads the application jetty.yml first" do
+        YAML.expects(:load_file).with('./config/jetty.yml').once.returns({})
+        config = Jettywrapper.load_config
+      end
+
+      it "falls back on the distributed jetty.yml" do
+        fallback_seq = sequence('fallback sequence')
+        YAML.expects(:load_file).in_sequence(fallback_seq).with('./config/jetty.yml').raises(Exception)
+        YAML.expects(:load_file).in_sequence(fallback_seq).with { |value| value =~ /jetty.yml/ }.returns({})
+        config = Jettywrapper.load_config
+      end
+
+      it "supports per-environment configuration" do
+        ENV['environment'] = 'test'
+        YAML.expects(:load_file).with('./config/jetty.yml').once.returns({:test => {:a => 2 }, :default => { :a => 1 }})
+        config = Jettywrapper.load_config
+        config[:a].should == 2
+      end
+
+      it "falls back on a 'default' environment configuration" do
+        ENV['environment'] = 'test'
+        YAML.expects(:load_file).with('./config/jetty.yml').once.returns({:default => { :a => 1 }})
+        config = Jettywrapper.load_config
+        config[:a].should == 1
+      end
     end
     
     context "instantiation" do
@@ -223,4 +250,3 @@ module Hydra
       end
     end
   end
-end
