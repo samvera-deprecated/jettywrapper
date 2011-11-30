@@ -35,6 +35,7 @@ bc..
       end
       raise "test failures: #{error}" if error
   end
+</pre>
 
 
 h2. Testing the gem 
