@@ -5,7 +5,7 @@ Jettywrapper provides rake tasks for starting and stopping jetty, as well as a m
 
 h2. Configuring Jettywrapper
 
-Jettywrapper starts the process with a list of options that you can specify in config/jetty.yml.  You can provide a per environment configuration, or you can have a default configuration which will be used when a per-environment configuration is not specified.
+Jettywrapper starts the process with a list of options that you can specify in config/jetty.yml (otherwise a default is used).  You can provide a per environment configuration, or you can have a default configuration which will be used when a per-environment configuration is not specified.
 
 <pre>default:
   jetty_port: 8983
