@@ -3,7 +3,9 @@ h1. jettywrapper
 This gem is designed to make it easier to integrate a jetty servlet container into a rails project.  
 Jettywrapper provides rake tasks for starting and stopping jetty, as well as a method (Jettywrapper.wrap) that will start the server before the block and stop the server after the block, which is useful for automated testing.
 
-h2. Jettywrapper starts the process with a list of options that you can specify in config/jetty.yml.  You can provide a per environment configuration, or you can have a default configuration which will be used when a per-environment configuration is not specified.
+h2. Configuring Jettywrapper
+
+Jettywrapper starts the process with a list of options that you can specify in config/jetty.yml.  You can provide a per environment configuration, or you can have a default configuration which will be used when a per-environment configuration is not specified.
 
 <pre>default:
   jetty_port: 8983
