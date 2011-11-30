@@ -1,6 +1,18 @@
 h1. jettywrapper
 
-This gem is designed to make it easier to run automated tests against jetty. Solr comes bundled in a jetty instance, and the hydra project has taken a similar approach with hydra-jetty, an instance of jetty pre-configured to load fedora, solr, and various other java servlets of use to the hydra project. 
+This gem is designed to make it easier to integrate a jetty servlet container into a rails project.  
+Jettywrapper provides rake tasks for starting and stopping jetty, as well as a method (Jettywrapper.wrap) that will start the server before the block and stop the server after the block, which is useful for automated testing.
+
+h2. Jettywrapper starts the process with a list of options that you can specify in config/jetty.yml.  You can provide a per environment configuration, or you can have a default configuration which will be used when a per-environment configuration is not specified.
+
+<pre>default:
+  jetty_port: 8983
+  java_opts:
+    - "-XX:MaxPermSize=128m"
+    - "-Xmx256m"
+</pre>
+
+
 
 h2. Instructions for the impatient:
 
@@ -8,7 +20,6 @@ bc..
   require 'jettywrapper'
   desc "Hudson build"
   task :hudson do
-    if (ENV['RAILS_ENV'] == "test")
       jetty_params = { 
         :jetty_home => File.expand_path(File.dirname(__FILE__) + '/../../jetty'), 
         :quiet => false, 
@@ -17,48 +28,13 @@ bc..
         :fedora_home => File.expand_path(File.dirname(__FILE__) + '/../../jetty/fedora/default'),
         :startup_wait => 30
         }
-      Rake::Task["db:drop"].invoke
-      Rake::Task["db:migrate"].invoke
-      Rake::Task["db:migrate:plugins"].invoke
       error = Jettywrapper.wrap(jetty_params) do  
-        Rake::Task["libra_oa:default_fixtures:refresh"].invoke
-        Rake::Task["hydra:fixtures:refresh"].invoke
         Rake::Task["spec"].invoke
-        Rake::Task["cucumber"].invoke
       end
       raise "test failures: #{error}" if error
-    else
-      system("rake hudson RAILS_ENV=test")
-      fail unless $?.success?
-    end
   end
 
-h2. Important note on creating nested rake tasks:
 
-When creating your rake tasks, keep in mind that rake does not by default propogate up errors raised from system commands.  
-If you use system(), the return value will be false for any exit codes other than 0.  If you use backticks or %x(), you must use $? to check the exit status code 
-after the call.  Failure to do so could result in false successes.
-
-h3. Example 1: Checking return value from system()
-
-bc.. 
-  #retval should return false for non-zero exit codes 
-  retval = system("rake hudson RAILS_ENV=test")
-  fail unless retval
-
-h3. Example 2: Checking $? with system()
-
-bc.. 
-  system("rake hudson RAILS_ENV=test")
-  raise "rake hudson encoutered errors" unless $?.success?
-
-h3. Example 3: An alternative method: using %x[] or backticks with $?
-
-bc.. 
-  # %x[] or `` will return everything sent to stdout from the command
-  puts %x[cucumber --tags ~@pending --tags ~@overwritten features]
-  raise "Cucumber failed." unless $?.success?
-  
 h2. Testing the gem 
 
 If you haven't already, clone the git repository
