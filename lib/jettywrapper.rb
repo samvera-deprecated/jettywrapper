@@ -71,9 +71,9 @@ class Jettywrapper
     # @param [Symbol] :quiet Keep quiet about jetty output? Default is true. 
     # @param [Symbol] :java_opts A list of options to pass to the jvm 
     def configure(params = {})
-      hydra_server = self.instance
-      hydra_server.reset_process!
-      hydra_server.quiet = params[:quiet].nil? ? true : params[:quiet]
+      jetty_server = self.instance
+      jetty_server.reset_process!
+      jetty_server.quiet = params[:quiet].nil? ? true : params[:quiet]
       if defined?(Rails.root)
        base_path = Rails.root
       elsif defined?(APP_ROOT)
@@ -81,12 +81,12 @@ class Jettywrapper
       else
        raise "You must set either Rails.root, APP_ROOT or pass :jetty_home as a parameter so I know where jetty is" unless params[:jetty_home]
       end
-      hydra_server.jetty_home = params[:jetty_home] || File.expand_path(File.join(base_path, 'jetty'))
-      hydra_server.solr_home = params[:solr_home]  || File.join( hydra_server.jetty_home, "solr")
-      hydra_server.port = params[:jetty_port] || 8888
-      hydra_server.startup_wait = params[:startup_wait] || 5
-      hydra_server.java_opts = params[:java_opts] || []
-      return hydra_server
+      jetty_server.jetty_home = params[:jetty_home] || File.expand_path(File.join(base_path, 'jetty'))
+      jetty_server.solr_home = params[:solr_home]  || File.join( jetty_server.jetty_home, "solr")
+      jetty_server.port = params[:jetty_port] || 8888
+      jetty_server.startup_wait = params[:startup_wait] || 5
+      jetty_server.java_opts = params[:java_opts] || []
+      return jetty_server
     end
    
      
@@ -117,7 +117,7 @@ class Jettywrapper
         yield
       rescue
         error = $!
-        puts "*** Error starting hydra-jetty: #{error}"
+        puts "*** Error starting jetty: #{error}"
       ensure
         # puts "stopping jetty server"
         jetty_server.stop
