@@ -1,3 +1,6 @@
+1.2.1
+  Fixed :restart task
+
 1.2.0
   Added per environment configuration
   Fixes for JRuby

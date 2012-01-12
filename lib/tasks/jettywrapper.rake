@@ -22,7 +22,7 @@ namespace :jetty do
   end
   
   desc "Restarts jetty"
-  task :restart do
+  task :restart => :environment do
     Jettywrapper.stop(JETTY_CONFIG)
     Jettywrapper.start(JETTY_CONFIG)
   end
