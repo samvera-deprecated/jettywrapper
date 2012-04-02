@@ -24,6 +24,8 @@ class Jettywrapper
   attr_accessor :base_path    # The root of the application. Used for determining where log files and PID files should go.
   attr_accessor :java_opts    # Options to pass to java (ex. ["-Xmx512mb", "-Xms128mb"])
   attr_accessor :port         # The port jetty should listen on
+
+  attr_accessor :jetty_opts   # Options to pass to jetty (ex. ["etc/my_jetty.xml", "etc/other.xml"] as in http://wiki.eclipse.org/Jetty/Reference/jetty.xml_usage
   
   # configure the singleton with some defaults
   def initialize(params = {})
@@ -86,6 +88,7 @@ class Jettywrapper
       jetty_server.port = params[:jetty_port] || 8888
       jetty_server.startup_wait = params[:startup_wait] || 5
       jetty_server.java_opts = params[:java_opts] || []
+      jetty_server.jetty_opts = params[:jetty_opts] || []
       return jetty_server
     end
    
@@ -100,7 +103,8 @@ class Jettywrapper
     #       :jetty_home => "/path/to/jetty", 
     #       :quiet => false, 
     #       :jetty_port => 8983, 
-    #       :startup_wait => 30
+    #       :startup_wait => 30,
+    #       :jetty_opts => "/etc/jetty.xml"
     #     }
     #     error = Jettywrapper.wrap(jetty_params) do   
     #       Rake::Task["rake:spec"].invoke 
@@ -211,7 +215,7 @@ class Jettywrapper
         
    # What command is being run to invoke jetty? 
    def jetty_command
-     ["java", java_variables, java_opts, "-jar", "start.jar"].flatten
+     ["java", java_variables, java_opts, "-jar", "start.jar", jetty_opts].flatten
    end
 
    def java_variables

@@ -12,7 +12,8 @@ require 'rubygems'
         :jetty_port => 8888,
         :solr_home => "/path/to/solr",
         :startup_wait => 0,
-        :java_opts => ["-Xmx256mb"]
+        :java_opts => ["-Xmx256mb"],
+        :jetty_opts => ["/path/to/jetty_xml", "/path/to/other_jetty_xml"]  
       }
     end
 
@@ -57,6 +58,7 @@ require 'rubygems'
         ts.port.should == 8888
         ts.solr_home.should == '/path/to/solr'
         ts.startup_wait.should == 0
+        ts.jetty_opts.should == @jetty_params[:jetty_opts]
       end
 
       # passing in a hash is no longer optional
@@ -70,7 +72,8 @@ require 'rubygems'
           :jetty_home => '/path/to/jetty',
           :jetty_port => nil,
           :solr_home => nil,
-          :startup_wait => nil
+          :startup_wait => nil,
+          :jetty_opts => nil
         }
 
         ts = Jettywrapper.configure(jetty_params) 
@@ -79,6 +82,7 @@ require 'rubygems'
         ts.port.should == 8888
         ts.solr_home.should == File.join(ts.jetty_home, "solr")
         ts.startup_wait.should == 5
+        ts.jetty_opts.should == []
       end
       
       it "passes all the expected values to jetty during startup" do
@@ -87,6 +91,8 @@ require 'rubygems'
         command.should include("-Dsolr.solr.home=#{@jetty_params[:solr_home]}")
         command.should include("-Djetty.port=#{@jetty_params[:jetty_port]}")
         command.should include("-Xmx256mb")
+        command.should include("start.jar")
+        command.slice(command.index('start.jar')+1, 2).should == @jetty_params[:jetty_opts]
       end
 
       it "escapes the :solr_home parameter" do
@@ -217,7 +223,7 @@ require 'rubygems'
           ts.jetty_home.should == "/path/to/jetty"
           ts.port.should == 8888
           ts.solr_home.should == "/path/to/solr"
-          ts.startup_wait.should == 0     
+          ts.startup_wait.should == 0   
         end
         error.should eql(false)
       end
