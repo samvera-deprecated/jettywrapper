@@ -23,7 +23,6 @@ class Jettywrapper
   attr_accessor :solr_home    # Where is solr located? Default is jetty_home/solr
   attr_accessor :base_path    # The root of the application. Used for determining where log files and PID files should go.
   attr_accessor :java_opts    # Options to pass to java (ex. ["-Xmx512mb", "-Xms128mb"])
-  attr_accessor :port         # The port jetty should listen on
   
   # configure the singleton with some defaults
   def initialize(params = {})
