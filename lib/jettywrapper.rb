@@ -1,4 +1,3 @@
-# Jettywrapper is a Singleton class, so you can only create one jetty instance at a time.
 require 'loggable'
 require 'singleton'
 require 'fileutils'
@@ -11,20 +10,20 @@ require 'active_support/core_ext/hash'
 Dir[File.expand_path(File.join(File.dirname(__FILE__),"tasks/*.rake"))].each { |ext| load ext } if defined?(Rake)
 
 
+# Jettywrapper is a Singleton class, so you can only create one jetty instance at a time.
 class Jettywrapper
   
   include Singleton
   include Loggable
   
-  attr_accessor :port         # What port should jetty start on? Default is 8888
-  attr_accessor :jetty_home   # Where is jetty located? 
-  attr_accessor :startup_wait # After jetty starts, how long to wait until starting the tests? 
-  attr_accessor :quiet        # Keep quiet about jetty output?
-  attr_accessor :solr_home    # Where is solr located? Default is jetty_home/solr
+  attr_accessor :jetty_home   # Jetty's home directory 
+  attr_accessor :port         # Jetty's port.  Default is 8888.  Note that attribute is named port, but params passed in expect :jetty_port
+  attr_accessor :startup_wait # How many seconds to wait for jetty to spin up. Default is 5.
+  attr_accessor :quiet        # true (default) to reduce Jetty's output
+  attr_accessor :solr_home    # Solr's home directory. Default is jetty_home/solr
   attr_accessor :base_path    # The root of the application. Used for determining where log files and PID files should go.
   attr_accessor :java_opts    # Options to pass to java (ex. ["-Xmx512mb", "-Xms128mb"])
   attr_accessor :jetty_opts   # Options to pass to jetty (ex. ["etc/my_jetty.xml", "etc/other.xml"] as in http://wiki.eclipse.org/Jetty/Reference/jetty.xml_usage
-  attr_accessor :port         # The port jetty should listen on
   
   # configure the singleton with some defaults
   def initialize(params = {})
@@ -65,12 +64,13 @@ class Jettywrapper
 
     # Set the jetty parameters. It accepts a Hash of symbols. 
     # @param [Hash<Symbol>] params
-    # @param [Symbol] :jetty_home Required. Where is jetty located? 
-    # @param [Symbol] :jetty_port What port should jetty start on? Default is 8888
-    # @param [Symbol] :startup_wait After jetty starts, how long to wait before running tests? If you don't let jetty start all the way before running the tests, they'll fail because they can't reach jetty.
-    # @param [Symbol] :solr_home Where is solr? Default is jetty_home/solr
-    # @param [Symbol] :quiet Keep quiet about jetty output? Default is true. 
-    # @param [Symbol] :java_opts A list of options to pass to the jvm 
+    #  :jetty_home Required. Jetty's home direcotry
+    #  :jetty_port  Jetty's port.  Default is 8888.   Note that attribute is named port, but params passed in expect :jetty_port
+    #  :startup_wait How many seconds to wait for jetty to spin up.  Default is 5. If jetty doesn't finish spinning up, tests can fail because they can't reach jetty.
+    #  :solr_home Solr's home directory. Default is jetty_home/solr
+    #  :quiet Keep True(default) to reduce jetty's output 
+    #  :java_opts options to pass to the jvm (ex. ["-Xmx512mb", "-Xms128mb"])
+    #  :jetty_opts options to pass to jetty (ex. ["etc/my_jetty.xml", "etc/other.xml"] as in http://wiki.eclipse.org/Jetty/Reference/jetty.xml_usage
     def configure(params = {})
       jetty_server = self.instance
       jetty_server.reset_process!
