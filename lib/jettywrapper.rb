@@ -6,6 +6,7 @@ require 'socket'
 require 'timeout'
 require 'childprocess'
 require 'active_support/core_ext/hash'
+require 'erb'
 
 Dir[File.expand_path(File.join(File.dirname(__FILE__),"tasks/*.rake"))].each { |ext| load ext } if defined?(Rake)
 
@@ -49,15 +50,31 @@ class Jettywrapper
         app_root = ENV['APP_ROOT']
         app_root ||= '.'
       end
-      filename = "#{app_root}/config/jetty.yml"
-      begin
-        file = YAML.load_file(filename)
-      rescue Exception => e
-        logger.warn "Didn't find expected jettywrapper config file at #{filename}, using default file instead."
-        file ||= YAML.load_file(File.join(File.dirname(__FILE__),"../config/jetty.yml"))
-        #raise "Unable to load: #{file}" unless file
+
+      jetty_file = "#{app_root}/config/jetty.yml"
+
+      unless File.exists?(jetty_file)
+        logger.warn "Didn't find expected jettywrapper config file at #{jetty_file}, using default file instead."
+        jetty_file = File.expand_path("../config/jetty.yml", File.dirname(__FILE__))
       end
-      config = file.with_indifferent_access
+
+      begin
+        @jetty_erb = ERB.new(IO.read(jetty_file)).result(binding)
+      rescue Exception => e
+        raise("jetty.yml was found, but could not be parsed with ERB. \n#{$!.inspect}")
+      end
+
+      begin
+        @jetty_yml = YAML::load(@jetty_erb)
+      rescue StandardError => e
+        raise("jetty.yml was found, but could not be parsed.\n")
+      end
+
+      if @jetty_yml.nil? || !@jetty_yml.is_a?(Hash)
+        raise("jetty.yml was found, but was blank or malformed.\n")
+      end
+
+      config = @jetty_yml.with_indifferent_access
       config[config_name] || config[:default]
     end
     

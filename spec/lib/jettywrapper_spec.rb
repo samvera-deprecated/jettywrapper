@@ -19,27 +19,33 @@ require 'rubygems'
 
     context "config" do
       it "loads the application jetty.yml first" do
-        YAML.expects(:load_file).with('./config/jetty.yml').once.returns({})
+        IO.expects(:read).with('./config/jetty.yml').once.returns("default:\n")
         config = Jettywrapper.load_config
+      end
+
+      it "loads the application jetty.yml using erb parsing" do
+        IO.expects(:read).with('./config/jetty.yml').once.returns("default:\n  a: <%= 123 %>")
+        config = Jettywrapper.load_config
+        config[:a] == 123
       end
 
       it "falls back on the distributed jetty.yml" do
         fallback_seq = sequence('fallback sequence')
-        YAML.expects(:load_file).in_sequence(fallback_seq).with('./config/jetty.yml').raises(Exception)
-        YAML.expects(:load_file).in_sequence(fallback_seq).with { |value| value =~ /jetty.yml/ }.returns({})
+        File.expects(:exists?).in_sequence(fallback_seq).with('./config/jetty.yml').returns(false)
+        IO.expects(:read).in_sequence(fallback_seq).with { |value| value =~ /jetty.yml/ }.returns("default:\n")
         config = Jettywrapper.load_config
       end
 
       it "supports per-environment configuration" do
         ENV['environment'] = 'test'
-        YAML.expects(:load_file).with('./config/jetty.yml').once.returns({:test => {:a => 2 }, :default => { :a => 1 }})
+        IO.expects(:read).with('./config/jetty.yml').once.returns("default:\n  a: 1\ntest:\n  a: 2")
         config = Jettywrapper.load_config
         config[:a].should == 2
       end
 
       it "falls back on a 'default' environment configuration" do
         ENV['environment'] = 'test'
-        YAML.expects(:load_file).with('./config/jetty.yml').once.returns({:default => { :a => 1 }})
+        IO.expects(:read).with('./config/jetty.yml').once.returns("default:\n  a: 1")
         config = Jettywrapper.load_config
         config[:a].should == 1
       end
