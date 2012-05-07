@@ -1,3 +1,4 @@
 source "http://rubygems.org"
 
-gemspec
+gemspec  
+gem 'rcov', :platform => :ruby_18
