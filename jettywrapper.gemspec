@@ -29,6 +29,7 @@ Gem::Specification.new do |s|
   # It will not add these as dependencies if you require lyber-core for other projects
   s.add_development_dependency "rspec", "< 2.0" # We're not ready to upgrade to rspec 2
   s.add_development_dependency 'mocha'
+  s.add_development_dependency 'rake'
 
   
   s.add_development_dependency 'yard', '0.6.5'  # Yard > 0.6.5 won't generate docs.
