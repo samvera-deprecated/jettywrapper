@@ -9,7 +9,7 @@ require 'rubygems'
       @jetty_params = {
         :quiet => false,
         :jetty_home => "/path/to/jetty",
-        :jetty_port => 8888,
+        :jetty_port => TEST_JETTY_PORTS.first,
         :solr_home => "/path/to/solr",
         :startup_wait => 0,
         :java_opts => ["-Xmx256mb"],
@@ -61,7 +61,7 @@ require 'rubygems'
         ts = Jettywrapper.configure(@jetty_params) 
         ts.quiet.should == false
         ts.jetty_home.should == "/path/to/jetty"
-        ts.port.should == 8888
+        ts.port.should == @jetty_params[:jetty_port]
         ts.solr_home.should == '/path/to/solr'
         ts.startup_wait.should == 0
         ts.jetty_opts.should == @jetty_params[:jetty_opts]
@@ -227,7 +227,7 @@ require 'rubygems'
           ts = Jettywrapper.instance 
           ts.quiet.should == @jetty_params[:quiet]
           ts.jetty_home.should == "/path/to/jetty"
-          ts.port.should == 8888
+          ts.port.should == @jetty_params[:jetty_port]
           ts.solr_home.should == "/path/to/solr"
           ts.startup_wait.should == 0   
         end
