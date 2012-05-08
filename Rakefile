@@ -24,7 +24,7 @@ Spec::Rake::SpecTask.new(:coverage) do |spec|
   spec.libs << 'lib' << 'spec'
   spec.pattern = 'spec/**/*_spec.rb'
 
-  ruby_engine = Object.constants.include?(:RUBY_ENGINE) ? RUBY_ENGINE : "ruby"
+  ruby_engine = defined?(:RUBY_ENGINE) ? RUBY_ENGINE : "ruby"
   ENV['COVERAGE'] = 'true' unless ruby_engine == 'jruby'
 
   if ENV['COVERAGE'] and RUBY_VERSION =~ /^1.8/
