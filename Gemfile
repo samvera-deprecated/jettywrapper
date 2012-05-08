@@ -1,6 +1,6 @@
 source "http://rubygems.org"
 
 gemspec  
-gem 'rcov', :platform => :ruby_18
-gem 'simplecov', :platform => :ruby_19
-gem 'simplecov-rcov', :platform => :ruby_19
+gem 'rcov', :platform => :mri_18
+gem 'simplecov', :platform => :mri_19
+gem 'simplecov-rcov', :platform => :mri_19
