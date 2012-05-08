@@ -24,9 +24,9 @@ Spec::Rake::SpecTask.new(:coverage) do |spec|
   spec.libs << 'lib' << 'spec'
   spec.pattern = 'spec/**/*_spec.rb'
 
-  ENV['COVERAGE'] = 'true'
+  ENV['COVERAGE'] = 'true' unless RUBY_ENGINE == 'jruby'
 
-  if RUBY_VERSION =~ /^1.8/
+  if ENV['COVERAGE'] and RUBY_VERSION =~ /^1.8/
     spec.rcov = true
     spec.rcov_opts = %w{--exclude spec\/*,gems\/*,ruby\/* --aggregate coverage.data}
   end
