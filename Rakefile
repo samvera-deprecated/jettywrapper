@@ -57,4 +57,4 @@ rescue LoadError
   end
 end
 
-task :default => [:rcov, :doc]
+task :default => [:coverage, :doc]
