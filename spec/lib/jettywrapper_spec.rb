@@ -237,11 +237,9 @@ require 'rubygems'
       it "captures any errors produced" do
         Jettywrapper.any_instance.stubs(:start).returns(true)
         Jettywrapper.any_instance.stubs(:stop).returns(true)
-        error = Jettywrapper.wrap(@jetty_params) do 
+        expect { error = Jettywrapper.wrap(@jetty_params) do 
           raise "this is an expected error message"
-        end
-        error.class.should eql(RuntimeError)
-        error.message.should eql("this is an expected error message")
+        end }.to raise_error "this is an expected error message"
       end
       
     end # end of wrapping context
