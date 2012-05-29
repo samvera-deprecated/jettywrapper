@@ -143,7 +143,7 @@ class Jettywrapper
         jetty_server.stop
       end
 
-      return error
+      raise error if error
     end
     
     # Convenience method for configuring and starting jetty with one command
