@@ -144,6 +144,8 @@ class Jettywrapper
       end
 
       raise error if error
+
+      return error
     end
     
     # Convenience method for configuring and starting jetty with one command
