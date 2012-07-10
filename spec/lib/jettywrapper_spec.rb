@@ -4,7 +4,6 @@ require 'rubygems'
   describe Jettywrapper do
     
     # JETTY1 = 
-    
     before(:all) do
       @jetty_params = {
         :quiet => false,
@@ -15,6 +14,38 @@ require 'rubygems'
         :java_opts => ["-Xmx256mb"],
         :jetty_opts => ["/path/to/jetty_xml", "/path/to/other_jetty_xml"]  
       }
+    end
+
+    context "app_root" do
+      subject {Jettywrapper}
+      context "When rails is present" do
+        before do
+          Jettywrapper.reset_config
+          class Rails
+            def self.root
+              'rails_root'
+            end
+          end
+        end
+        after do
+          Object.send(:remove_const, :Rails)
+          Jettywrapper.reset_config
+        end
+        its(:app_root) {should == 'rails_root'}
+      end
+      context "When APP_ROOT is set" do
+        before do
+          APP_ROOT = 'custom_root'
+        end
+        after do
+          Object.send(:remove_const, :APP_ROOT)
+          Jettywrapper.reset_config
+        end
+        its(:app_root) {should == 'custom_root'}
+      end
+      context "otherwise" do
+        its(:app_root) {should == '.'}
+      end
     end
 
     context "config" do

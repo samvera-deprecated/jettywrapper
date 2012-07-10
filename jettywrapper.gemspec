@@ -7,8 +7,8 @@ Gem::Specification.new do |s|
   s.name        = "jettywrapper"
   s.version     = GEMVERSION
   s.platform    = Gem::Platform::RUBY
-  s.authors     = ["Bess Sadler"]
-  s.email       = ["bess@stanford.edu"]
+  s.authors     = ["Chris Beer", "Justin Coyne", "Bess Sadler"]
+  s.email       = ["hydra-tech@googlegroups.com"]
   s.homepage    = "https://github.com/projecthydra/jettywrapper"
   s.summary     = %q{Convenience tasks for working with jetty from within a ruby project.}
   s.description = %q{Spin up a jetty instance (e.g., the one at https://github.com/projecthydra/hydra-jetty) and wrap test in it. This lets us run tests against a real copy of solr and fedora.}
@@ -37,6 +37,6 @@ Gem::Specification.new do |s|
                                                 # debug it right now
   
   s.add_development_dependency 'RedCloth'
-  
+
 end
 

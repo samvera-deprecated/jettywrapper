@@ -28,27 +28,36 @@ class Jettywrapper
   
   # configure the singleton with some defaults
   def initialize(params = {})
-    if defined?(Rails.root)
-      @base_path = Rails.root
-    else
-      @base_path = "."
-    end
-
+    self.base_path = self.class.app_root
     logger.debug 'Initializing jettywrapper'
   end
+
   
   # Methods inside of the class << self block can be called directly on Jettywrapper, as class methods. 
   # Methods outside the class << self block must be called on Jettywrapper.instance, as instance methods.
   class << self
+
+    def reset_config
+      @app_root = nil
+    end
+
+    def app_root
+      return @app_root if @app_root
+      if defined?(Rails.root)
+        @app_root = Rails.root
+      elsif defined?(APP_ROOT)
+        @app_root = APP_ROOT
+      else
+        @app_root = '.'
+      end
+      @app_root
+    end
     
     def load_config
       if defined? Rails 
         config_name =  Rails.env 
-        app_root = Rails.root
       else 
         config_name =  ENV['environment']
-        app_root = ENV['APP_ROOT']
-        app_root ||= '.'
       end
 
       jetty_file = "#{app_root}/config/jetty.yml"
@@ -276,7 +285,7 @@ class Jettywrapper
      begin
        f = File.new(pid_path,  "w")
      rescue Errno::ENOENT, Errno::EACCES
-       f = File.new(File.join(@base_path,'tmp',pid_file),"w")
+       f = File.new(File.join(base_path,'tmp',pid_file),"w")
      end
      f.puts "#{process.pid}"
      f.close
@@ -363,7 +372,7 @@ class Jettywrapper
 
    # The directory where the pid_file will be written
    def pid_dir
-     File.expand_path(File.join(@base_path,'tmp','pids'))
+     File.expand_path(File.join(base_path,'tmp','pids'))
    end
    
    # Check to see if there is a pid file already
