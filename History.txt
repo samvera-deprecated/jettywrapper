@@ -1,3 +1,6 @@
+1.3.2
+  Throw error on start if port already in use
+
 1.3.1
   It should use APP_ROOT constant throughout, not APP_ROOT environment variable.
 
