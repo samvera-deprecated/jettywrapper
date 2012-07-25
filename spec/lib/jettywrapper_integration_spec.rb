@@ -2,6 +2,7 @@ require 'spec_helper'
 require 'rubygems'
 require 'uri'
 require 'net/http'
+require 'socket'
 
 module Hydra
   describe Jettywrapper do    
@@ -77,6 +78,24 @@ module Hydra
         ts.start
         lambda{ ts.start }.should raise_exception
         ts.stop
+      end
+
+      it "raises an error if you try to start a jetty when the port is already in use" do
+        jetty_params = {
+          :jetty_home => File.expand_path("#{File.dirname(__FILE__)}/../../jetty"),
+          :jetty_port => TEST_JETTY_PORTS.first,
+          :startup_wait => 30
+        }
+	socket = TCPServer.new(TEST_JETTY_PORTS.first)
+        begin
+          ts = Jettywrapper.configure(jetty_params) 
+          ts.stop
+          ts.pid_file?.should eql(false)
+          lambda{ ts.start }.should raise_exception
+          ts.stop
+        ensure
+          socket.close
+        end
       end
 
     end

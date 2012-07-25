@@ -274,9 +274,9 @@ class Jettywrapper
          logger.warn "Removing stale PID file at #{pid_path}"
          File.delete(pid_path)
        end
-       if Jettywrapper.is_port_in_use?(self.port)
-         raise("Port #{self.port} is already in use.")
-       end
+     end
+     if Jettywrapper.is_port_in_use?(self.port)
+       raise("Port #{self.port} is already in use.")
      end
      Dir.chdir(@jetty_home) do
        process.start
