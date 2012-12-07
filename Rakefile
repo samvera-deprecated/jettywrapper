@@ -21,9 +21,6 @@ RSpec::Core::RakeTask.new(:spec) do |spec|
 end
 
 RSpec::Core::RakeTask.new(:coverage) do |spec|
-  spec.libs << 'lib' << 'spec'
-  spec.pattern = 'spec/**/*_spec.rb'
-
   ruby_engine = defined?(RUBY_ENGINE) ? RUBY_ENGINE : "ruby"
   ENV['COVERAGE'] = 'true' unless ruby_engine == 'jruby'
 
