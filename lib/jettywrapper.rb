@@ -16,6 +16,8 @@ class Jettywrapper
   
   include Singleton
   include Loggable
+  include ActiveSupport::Benchmarkable
+  
   
   attr_accessor :jetty_home   # Jetty's home directory 
   attr_accessor :port         # Jetty's port.  Default is 8888.  Note that attribute is named port, but params passed in expect :jetty_port
@@ -29,7 +31,6 @@ class Jettywrapper
   # configure the singleton with some defaults
   def initialize(params = {})
     self.base_path = self.class.app_root
-    logger.debug 'Initializing jettywrapper'
   end
 
   
@@ -261,7 +262,6 @@ class Jettywrapper
    def start
      logger.debug "Starting jetty with these values: "
      logger.debug "jetty_home: #{@jetty_home}"
-     logger.debug "solr_home: #{@solr_home}"
      logger.debug "jetty_command: #{jetty_command.join(' ')}"
      
      # Check to see if we can start.
@@ -278,19 +278,21 @@ class Jettywrapper
      if Jettywrapper.is_port_in_use?(self.port)
        raise("Port #{self.port} is already in use.")
      end
-     Dir.chdir(@jetty_home) do
-       process.start
+     benchmark "Started jetty" do
+       Dir.chdir(@jetty_home) do
+         process.start
+       end
+       FileUtils.makedirs(pid_dir) unless File.directory?(pid_dir)
+       begin
+         f = File.new(pid_path,  "w")
+       rescue Errno::ENOENT, Errno::EACCES
+         f = File.new(File.join(base_path,'tmp',pid_file),"w")
+       end
+       f.puts "#{process.pid}"
+       f.close
+       logger.debug "Wrote pid file to #{pid_path} with value #{process.pid}"
+       startup_wait!
      end
-     FileUtils.makedirs(pid_dir) unless File.directory?(pid_dir)
-     begin
-       f = File.new(pid_path,  "w")
-     rescue Errno::ENOENT, Errno::EACCES
-       f = File.new(File.join(base_path,'tmp',pid_file),"w")
-     end
-     f.puts "#{process.pid}"
-     f.close
-     logger.debug "Wrote pid file to #{pid_path} with value #{process.pid}"
-     startup_wait!
    end
 
    # Wait for the jetty server to start and begin listening for requests
