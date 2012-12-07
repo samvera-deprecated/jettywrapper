@@ -9,3 +9,4 @@ coverage.data
 .yardoc
 doc
 tmp/
+.rvmrc
