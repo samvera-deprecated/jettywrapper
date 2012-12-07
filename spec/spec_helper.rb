@@ -8,11 +8,10 @@ if ENV['COVERAGE'] and RUBY_VERSION =~ /^1.9/
   SimpleCov.start
 end
 
-require 'spec/autorun'
-# require 'spec/rails'
+require 'rspec/autorun'
 require 'jettywrapper'
 
-Spec::Runner.configure do |config|
+RSpec.configure do |config|
   config.mock_with :mocha
 end
 

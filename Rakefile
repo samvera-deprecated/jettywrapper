@@ -1,6 +1,6 @@
 require 'rake'
 require 'bundler'
-require 'spec/rake/spectask'
+require 'rspec/core/rake_task'
 require 'yard'
 
 Bundler::GemHelper.install_tasks
@@ -15,12 +15,12 @@ rescue Bundler::BundlerError => e
   exit e.status_code
 end
 
-Spec::Rake::SpecTask.new(:spec) do |spec|
-  spec.libs << 'lib' << 'spec'
-  spec.spec_files = FileList['spec/**/*_spec.rb']
+RSpec::Core::RakeTask.new(:spec) do |spec|
+#  spec.libs << 'lib' << 'spec'
+#  spec.spec_files = FileList['spec/**/*_spec.rb']
 end
 
-Spec::Rake::SpecTask.new(:coverage) do |spec|
+RSpec::Core::RakeTask.new(:coverage) do |spec|
   spec.libs << 'lib' << 'spec'
   spec.pattern = 'spec/**/*_spec.rb'
 

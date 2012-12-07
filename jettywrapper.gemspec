@@ -25,14 +25,12 @@ Gem::Specification.new do |s|
   s.add_dependency "i18n"
   s.add_dependency "activesupport", ">=3.0.0"
   
-  # Bundler will install these gems too if you've checked this out from source from git and run 'bundle install'
-  # It will not add these as dependencies if you require lyber-core for other projects
-  s.add_development_dependency "rspec", "< 2.0" # We're not ready to upgrade to rspec 2
+  s.add_development_dependency "rspec"
   s.add_development_dependency 'mocha'
   s.add_development_dependency 'rake'
 
   
-  s.add_development_dependency 'yard', '0.6.5'  # Yard > 0.6.5 won't generate docs.
+  s.add_development_dependency 'yard'#, '0.6.5'  # Yard > 0.6.5 won't generate docs.
                                                 # I don't know why & don't have time to 
                                                 # debug it right now
   
