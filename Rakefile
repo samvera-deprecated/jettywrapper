@@ -54,4 +54,5 @@ rescue LoadError
   end
 end
 
-task :default => [:coverage, :doc]
+#task :default => [:coverage, :doc]
+task :default => [:spec]
