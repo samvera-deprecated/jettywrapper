@@ -12,7 +12,6 @@ require 'rspec/autorun'
 require 'jettywrapper'
 
 RSpec.configure do |config|
-  config.mock_with :mocha
 end
 
 unless ENV.select { |k,v| k =~ /TEST_JETTY_PORT/ }.empty?

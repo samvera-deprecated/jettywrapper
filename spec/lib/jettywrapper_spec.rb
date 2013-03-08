@@ -21,14 +21,14 @@ require 'rubygems'
     context "downloading" do
       context "with default file" do
         it "should download the zip file" do
-          Jettywrapper.expects(:system).with('curl -L https://github.com/projecthydra/hydra-jetty/archive/new-solr-schema.zip -o tmp/new-solr-schema.zip').returns(system (':'))
+          Jettywrapper.should_receive(:system).with('curl -L https://github.com/projecthydra/hydra-jetty/archive/new-solr-schema.zip -o tmp/new-solr-schema.zip').and_return(system (':'))
           Jettywrapper.download
         end
       end
 
       context "specifying the file" do
         it "should download the zip file" do
-          Jettywrapper.expects(:system).with('curl -L http://example.co/file.zip -o tmp/file.zip').returns(system (':'))
+          Jettywrapper.should_receive(:system).with('curl -L http://example.co/file.zip -o tmp/file.zip').and_return(system (':'))
           Jettywrapper.download('http://example.co/file.zip')
           Jettywrapper.url.should == 'http://example.co/file.zip'
         end
@@ -41,10 +41,10 @@ require 'rubygems'
       end
       context "with default file" do
         it "should download the zip file" do
-          File.expects(:exists?).returns(true)
-          Jettywrapper.expects(:expanded_zip_dir).returns('tmp/jetty_generator/hydra-jetty-new-solr-schema')
-          Jettywrapper.expects(:system).with('unzip -d tmp/jetty_generator -qo tmp/new-solr-schema.zip').returns(system (':'))
-          Jettywrapper.expects(:system).with('mv tmp/jetty_generator/hydra-jetty-new-solr-schema jetty').returns(system (':'))
+          File.should_receive(:exists?).and_return(true)
+          Jettywrapper.should_receive(:expanded_zip_dir).and_return('tmp/jetty_generator/hydra-jetty-new-solr-schema')
+          Jettywrapper.should_receive(:system).with('unzip -d tmp/jetty_generator -qo tmp/new-solr-schema.zip').and_return(system (':'))
+          Jettywrapper.should_receive(:system).with('mv tmp/jetty_generator/hydra-jetty-new-solr-schema jetty').and_return(system (':'))
           Jettywrapper.unzip
         end
       end
@@ -54,10 +54,10 @@ require 'rubygems'
           Jettywrapper.url = 'http://example.co/file.zip'
         end
         it "should download the zip file" do
-          File.expects(:exists?).returns(true)
-          Jettywrapper.expects(:expanded_zip_dir).returns('tmp/jetty_generator/interal_dir')
-          Jettywrapper.expects(:system).with('unzip -d tmp/jetty_generator -qo tmp/file.zip').returns(system (':'))
-          Jettywrapper.expects(:system).with('mv tmp/jetty_generator/interal_dir jetty').returns(system (':'))
+          File.should_receive(:exists?).and_return(true)
+          Jettywrapper.should_receive(:expanded_zip_dir).and_return('tmp/jetty_generator/interal_dir')
+          Jettywrapper.should_receive(:system).with('unzip -d tmp/jetty_generator -qo tmp/file.zip').and_return(system (':'))
+          Jettywrapper.should_receive(:system).with('mv tmp/jetty_generator/interal_dir jetty').and_return(system (':'))
           Jettywrapper.unzip
         end
       end
@@ -139,33 +139,32 @@ require 'rubygems'
 
     context "config" do
       it "loads the application jetty.yml first" do
-        IO.expects(:read).with('./config/jetty.yml').once.returns("default:\n")
+        IO.should_receive(:read).with('./config/jetty.yml').and_return("default:\n")
         config = Jettywrapper.load_config
       end
 
       it "loads the application jetty.yml using erb parsing" do
-        IO.expects(:read).with('./config/jetty.yml').once.returns("default:\n  a: <%= 123 %>")
+        IO.should_receive(:read).with('./config/jetty.yml').and_return("default:\n  a: <%= 123 %>")
         config = Jettywrapper.load_config
         config[:a] == 123
       end
 
       it "falls back on the distributed jetty.yml" do
-        fallback_seq = sequence('fallback sequence')
-        File.expects(:exists?).in_sequence(fallback_seq).with('./config/jetty.yml').returns(false)
-        IO.expects(:read).in_sequence(fallback_seq).with { |value| value =~ /jetty.yml/ }.returns("default:\n")
+        File.should_receive(:exists?).with('./config/jetty.yml').and_return(false)
+        IO.should_receive(:read).with { |value| value =~ /jetty.yml/ }.and_return("default:\n")
         config = Jettywrapper.load_config
       end
 
       it "supports per-environment configuration" do
         ENV['environment'] = 'test'
-        IO.expects(:read).with('./config/jetty.yml').once.returns("default:\n  a: 1\ntest:\n  a: 2")
+        IO.should_receive(:read).with('./config/jetty.yml').and_return("default:\n  a: 1\ntest:\n  a: 2")
         config = Jettywrapper.load_config
         config[:a].should == 2
       end
 
       it "falls back on a 'default' environment configuration" do
         ENV['environment'] = 'test'
-        IO.expects(:read).with('./config/jetty.yml').once.returns("default:\n  a: 1")
+        IO.should_receive(:read).with('./config/jetty.yml').and_return("default:\n  a: 1")
         config = Jettywrapper.load_config
         config[:a].should == 1
       end
@@ -232,7 +231,7 @@ require 'rubygems'
           :jetty_home => '/tmp'
         }
         ts = Jettywrapper.configure(jetty_params) 
-        Jettywrapper.any_instance.stubs(:process).returns(stub('proc', :start => nil, :pid=>5454))
+        Jettywrapper.any_instance.stub(:process).and_return(stub('proc', :start => nil, :pid=>5454))
         ts.stop
         ts.start
         ts.pid.should eql(5454)
@@ -245,21 +244,19 @@ require 'rubygems'
         }
         ts = Jettywrapper.configure(jetty_params) 
         ts.stop
-        Jettywrapper.any_instance.stubs(:process).returns(stub('proc', :start => nil, :pid=>2323))
+        Jettywrapper.any_instance.stub(:process).and_return(stub('proc', :start => nil, :pid=>2323))
         swp = Jettywrapper.start(jetty_params)
         swp.pid.should eql(2323)
         swp.pid_file.should eql("_tmp.pid")
         swp.stop
       end
       
-      it "checks to see if its pid files are stale" do
-        @pending
-      end
+      it "checks to see if its pid files are stale"
       
       # return true if it's running, otherwise return false
       it "can get the status for a given jetty instance" do
         # Don't actually start jetty, just fake it
-        Jettywrapper.any_instance.stubs(:process).returns(stub('proc', :start => nil, :pid=>12345))
+        Jettywrapper.any_instance.stub(:process).and_return(stub('proc', :start => nil, :pid=>12345))
         
         jetty_params = {
           :jetty_home => File.expand_path("#{File.dirname(__FILE__)}/../../jetty")
@@ -273,7 +270,7 @@ require 'rubygems'
       
       it "can get the pid for a given jetty instance" do
         # Don't actually start jetty, just fake it
-        Jettywrapper.any_instance.stubs(:process).returns(stub('proc', :start => nil, :pid=>54321))
+        Jettywrapper.any_instance.stub(:process).and_return(stub('proc', :start => nil, :pid=>54321))
         jetty_params = {
           :jetty_home => File.expand_path("#{File.dirname(__FILE__)}/../../jetty")
         }
@@ -288,7 +285,7 @@ require 'rubygems'
         jetty_params = {
           :jetty_home => '/tmp', :jetty_port => 8777
         }
-        Jettywrapper.any_instance.stubs(:process).returns(stub('proc', :start => nil, :pid=>2323))
+        Jettywrapper.any_instance.stub(:process).and_return(stub('proc', :start => nil, :pid=>2323))
         swp = Jettywrapper.start(jetty_params)
         (File.file? swp.pid_path).should eql(true)
         
@@ -311,7 +308,7 @@ require 'rubygems'
           :jetty_home => '/tmp'
         }
         ts = Jettywrapper.configure(jetty_params) 
-        Jettywrapper.any_instance.stubs(:process).returns(stub('proc', :start => nil, :pid=>2222))
+        Jettywrapper.any_instance.stub(:process).and_return(stub('proc', :start => nil, :pid=>2222))
         ts.stop
         ts.pid_file?.should eql(false)
         ts.start
@@ -333,16 +330,16 @@ require 'rubygems'
     
     context "wrapping a task" do
       it "wraps another method" do
-        Jettywrapper.any_instance.stubs(:start).returns(true)
-        Jettywrapper.any_instance.stubs(:stop).returns(true)
+        Jettywrapper.any_instance.stub(:start).and_return(true)
+        Jettywrapper.any_instance.stub(:stop).and_return(true)
         error = Jettywrapper.wrap(@jetty_params) do            
         end
         error.should eql(false)
       end
       
       it "configures itself correctly when invoked via the wrap method" do
-        Jettywrapper.any_instance.stubs(:start).returns(true)
-        Jettywrapper.any_instance.stubs(:stop).returns(true)
+        Jettywrapper.any_instance.stub(:start).and_return(true)
+        Jettywrapper.any_instance.stub(:stop).and_return(true)
         error = Jettywrapper.wrap(@jetty_params) do 
           ts = Jettywrapper.instance 
           ts.quiet.should == @jetty_params[:quiet]
@@ -355,9 +352,9 @@ require 'rubygems'
       end
       
       it "captures any errors produced" do
-        Jettywrapper.any_instance.stubs(:start).returns(true)
-        Jettywrapper.any_instance.stubs(:stop).returns(true)
-        Jettywrapper.instance.logger.expects(:error).with("*** Error starting jetty: this is an expected error message")
+        Jettywrapper.any_instance.stub(:start).and_return(true)
+        Jettywrapper.any_instance.stub(:stop).and_return(true)
+        Jettywrapper.instance.logger.should_receive(:error).with("*** Error starting jetty: this is an expected error message")
         expect { error = Jettywrapper.wrap(@jetty_params) do 
           raise "this is an expected error message"
         end }.to raise_error "this is an expected error message"
