@@ -14,6 +14,95 @@ require 'rubygems'
         :java_opts => ["-Xmx256mb"],
         :jetty_opts => ["/path/to/jetty_xml", "/path/to/other_jetty_xml"]  
       }
+
+      Jettywrapper.logger.level=3
+    end
+
+    context "downloading" do
+      context "with default file" do
+        it "should download the zip file" do
+          Jettywrapper.expects(:system).with('curl -L https://github.com/projecthydra/hydra-jetty/archive/new-solr-schema.zip -o tmp/new-solr-schema.zip').returns(system (':'))
+          Jettywrapper.download
+        end
+      end
+
+      context "specifying the file" do
+        it "should download the zip file" do
+          Jettywrapper.expects(:system).with('curl -L http://example.co/file.zip -o tmp/file.zip').returns(system (':'))
+          Jettywrapper.download('http://example.co/file.zip')
+          Jettywrapper.url.should == 'http://example.co/file.zip'
+        end
+      end
+    end
+
+    context "unzip" do
+      before do
+        Jettywrapper.url = nil
+      end
+      context "with default file" do
+        it "should download the zip file" do
+          File.expects(:exists?).returns(true)
+          Jettywrapper.expects(:expanded_zip_dir).returns('tmp/jetty_generator/hydra-jetty-new-solr-schema')
+          Jettywrapper.expects(:system).with('unzip -d tmp/jetty_generator -qo tmp/new-solr-schema.zip').returns(system (':'))
+          Jettywrapper.expects(:system).with('mv tmp/jetty_generator/hydra-jetty-new-solr-schema jetty').returns(system (':'))
+          Jettywrapper.unzip
+        end
+      end
+
+      context "specifying the file" do
+        before do
+          Jettywrapper.url = 'http://example.co/file.zip'
+        end
+        it "should download the zip file" do
+          File.expects(:exists?).returns(true)
+          Jettywrapper.expects(:expanded_zip_dir).returns('tmp/jetty_generator/interal_dir')
+          Jettywrapper.expects(:system).with('unzip -d tmp/jetty_generator -qo tmp/file.zip').returns(system (':'))
+          Jettywrapper.expects(:system).with('mv tmp/jetty_generator/interal_dir jetty').returns(system (':'))
+          Jettywrapper.unzip
+        end
+      end
+    end
+
+    context ".url" do
+      before do
+        subject.url = nil
+      end
+      subject {Jettywrapper}
+      context "When a constant is set" do
+        before do
+          ZIP_URL = 'http://example.com/foo.zip'
+        end
+        after do
+          Object.send(:remove_const, :ZIP_URL)
+        end
+        its(:url) {should == 'http://example.com/foo.zip'}
+      end
+      context "when a url is set" do
+        before do
+          subject.url = 'http://example.com/bar.zip'
+        end
+        its(:url) {should == 'http://example.com/bar.zip'}
+      end
+      context "when url is not set" do
+        its(:url) {should == 'https://github.com/projecthydra/hydra-jetty/archive/new-solr-schema.zip'}
+      end
+    end
+
+    context ".tmp_dir" do
+      subject {Jettywrapper}
+      context "when a dir is set" do
+        before do
+          subject.tmp_dir = '/opt/tmp'
+        end
+        its(:tmp_dir) {should == '/opt/tmp'}
+      end
+      context "when dir is not set" do
+        before do
+          subject.tmp_dir = nil
+        end
+        its(:tmp_dir) {should == 'tmp'}
+      end
+
     end
 
     context "app_root" do
@@ -268,6 +357,7 @@ require 'rubygems'
       it "captures any errors produced" do
         Jettywrapper.any_instance.stubs(:start).returns(true)
         Jettywrapper.any_instance.stubs(:stop).returns(true)
+        Jettywrapper.instance.logger.expects(:error).with("*** Error starting jetty: this is an expected error message")
         expect { error = Jettywrapper.wrap(@jetty_params) do 
           raise "this is an expected error message"
         end }.to raise_error "this is an expected error message"

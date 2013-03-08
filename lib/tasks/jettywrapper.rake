@@ -2,6 +2,20 @@
 require 'yaml'
 
 namespace :jetty do
+  JETTY_DIR = 'jetty'
+
+  desc "download the jetty zip file"
+  task :download do
+    Jettywrapper.download
+  end
+
+  task :unzip do
+    Jettywrapper.unzip
+  end
+
+  task :clean do
+    Jettywrapper.clean
+  end
   
   desc "Return the status of jetty"
   task :status => :environment do

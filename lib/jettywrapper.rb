@@ -38,6 +38,60 @@ class Jettywrapper
   # Methods outside the class << self block must be called on Jettywrapper.instance, as instance methods.
   class << self
 
+    def url=(url)
+      @url = url
+    end
+
+    def url
+      @url ||= defined?(ZIP_URL) ? ZIP_URL : 'https://github.com/projecthydra/hydra-jetty/archive/new-solr-schema.zip'
+      @url
+    end
+
+    def tmp_dir=(dir)
+      @tmp_dir = dir
+    end
+
+    def tmp_dir
+      @tmp_dir ||= 'tmp'
+    end
+
+    def zip_file
+      File.join tmp_dir, url.split('/').last
+    end
+
+    def jetty_dir
+      'jetty'
+    end
+
+    def download(url = 'https://github.com/projecthydra/hydra-jetty/archive/new-solr-schema.zip')
+      self.url = url
+      logger.info "Downloading jetty..."
+      system "curl -L #{url} -o #{zip_file}"
+      abort "Unable to download jetty from #{url}" unless $?.success?
+    end
+    
+    def unzip
+      download unless File.exists? zip_file
+      logger.info "Unpacking jetty..."
+      tmp_save_dir = File.join tmp_dir, 'jetty_generator'
+      system "unzip -d #{tmp_save_dir} -qo #{zip_file}"
+      abort "Unable to unzip #{zip_file} into tmp_save_dir/" unless $?.success?
+
+      system "mv #{expanded_zip_dir} #{jetty_dir}"
+      abort "Unable to move #{expanded_dir} into #{jetty_dir}/" unless $?.success?
+    end
+
+    def expanded_zip_dir(tmp_save_dir)
+      # This old way is more specific, but won't work for blacklight-jetty
+      #expanded_dir = Dir[File.join(tmp_save_dir, "hydra-jetty-*")].first        
+      Dir[File.join(tmp_save_dir, "*")].first        
+    end
+
+    def clean
+      system "rm -rf #{jetty_dir}"
+      unzip
+    end
+
     def reset_config
       @app_root = nil
     end
@@ -147,7 +201,7 @@ class Jettywrapper
         yield
       rescue
         error = $!
-        puts "*** Error starting jetty: #{error}"
+        logger.error "*** Error starting jetty: #{error}"
       ensure
         # puts "stopping jetty server"
         jetty_server.stop

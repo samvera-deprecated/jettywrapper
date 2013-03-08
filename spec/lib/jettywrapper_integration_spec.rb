@@ -14,7 +14,7 @@ module Hydra
       it "starts" do
         jetty_params = {
           :jetty_home => File.expand_path("#{File.dirname(__FILE__)}/../../jetty"),
-          :startup_wait => 30,
+          :startup_wait => 45,
           :jetty_port => TEST_JETTY_PORTS.first
         }
         Jettywrapper.configure(jetty_params) 
@@ -37,7 +37,7 @@ module Hydra
       it "won't start if it's already running" do
         jetty_params = {
           :jetty_home => File.expand_path("#{File.dirname(__FILE__)}/../../jetty"),
-          :startup_wait => 30,
+          :startup_wait => 45,
           :jetty_port => TEST_JETTY_PORTS.first
         }
         Jettywrapper.configure(jetty_params) 
