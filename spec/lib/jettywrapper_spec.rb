@@ -216,7 +216,7 @@ require 'rubygems'
         command = ts.jetty_command
         command.should include("-Dsolr.solr.home=#{@jetty_params[:solr_home]}")
         command.should include("-Djetty.port=#{@jetty_params[:jetty_port]}")
-        command.should include("-Xmx256mb")
+        command.should include("-Xmx256m")
         command.should include("start.jar")
         command.slice(command.index('start.jar')+1, 2).should == @jetty_params[:jetty_opts]
       end

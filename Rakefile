@@ -15,7 +15,7 @@ rescue Bundler::BundlerError => e
   exit e.status_code
 end
 
-RSpec::Core::RakeTask.new(:spec => 'jetty:unzip') do |spec|
+RSpec::Core::RakeTask.new(:spec => 'jetty:clean') do |spec|
 #  spec.libs << 'lib' << 'spec'
 #  spec.spec_files = FileList['spec/**/*_spec.rb']
 end

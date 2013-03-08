@@ -55,19 +55,21 @@ module Hydra
         ts.stop
       end
       
-      it "can check to see whether a port is already in use" do
-        jetty_params = {
-          :jetty_home => File.expand_path("#{File.dirname(__FILE__)}/../../jetty"),
-          :jetty_port => TEST_JETTY_PORTS.last,
-          :java_opts => ["-Xmx256m", '-XX:MaxPermSize=256m'],
-          :startup_wait => 30
-        }
-        Jettywrapper.stop(jetty_params) 
-        sleep 10
-        Jettywrapper.is_port_in_use?(jetty_params[:jetty_port]).should eql(false)
-        Jettywrapper.start(jetty_params) 
-        Jettywrapper.is_port_in_use?(jetty_params[:jetty_port]).should eql(true)
-        Jettywrapper.stop(jetty_params) 
+      describe "is_port_in_use?" do
+        describe "when a server is running on the port" do
+          before do
+            @s = TCPServer.new('127.0.0.1', TEST_JETTY_PORTS.last)
+          end
+          after do
+            @s.close
+          end
+          it "can check to see whether a port is already in use" do
+            Jettywrapper.is_port_in_use?(TEST_JETTY_PORTS.last).should eql(true)
+          end
+        end
+        it "should be false when nothing is running" do
+          Jettywrapper.is_port_in_use?(TEST_JETTY_PORTS.last).should eql(false)
+        end
       end
       
       it "raises an error if you try to start a jetty that is already running" do
@@ -90,7 +92,7 @@ module Hydra
           :jetty_port => TEST_JETTY_PORTS.first,
           :startup_wait => 30
         }
-	socket = TCPServer.new(TEST_JETTY_PORTS.first)
+	      socket = TCPServer.new(TEST_JETTY_PORTS.first)
         begin
           ts = Jettywrapper.configure(jetty_params) 
           ts.stop
