@@ -11,7 +11,7 @@ require 'rubygems'
         :jetty_port => TEST_JETTY_PORTS.first,
         :solr_home => "/path/to/solr",
         :startup_wait => 0,
-        :java_opts => ["-Xmx256mb"],
+        :java_opts => ["-Xmx256m"],
         :jetty_opts => ["/path/to/jetty_xml", "/path/to/other_jetty_xml"]  
       }
 

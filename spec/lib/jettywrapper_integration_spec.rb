@@ -9,12 +9,14 @@ module Hydra
     context "integration" do
       before(:all) do
         $stderr.reopen("/dev/null", "w")
+        Jettywrapper.logger.level=3
       end
       
       it "starts" do
         jetty_params = {
           :jetty_home => File.expand_path("#{File.dirname(__FILE__)}/../../jetty"),
           :startup_wait => 45,
+          :java_opts => ["-Xmx256m", '-XX:MaxPermSize=256m'],
           :jetty_port => TEST_JETTY_PORTS.first
         }
         Jettywrapper.configure(jetty_params) 
@@ -28,7 +30,7 @@ module Hydra
       
         # Can we connect to solr?
         require 'net/http' 
-        response = Net::HTTP.get_response(URI.parse("http://localhost:#{jetty_params[:jetty_port]}/solr/development/admin/"))
+        response = Net::HTTP.get_response(URI.parse("http://localhost:#{jetty_params[:jetty_port]}/solr/"))
         response.code.should eql("200")
         ts.stop
       
@@ -38,6 +40,7 @@ module Hydra
         jetty_params = {
           :jetty_home => File.expand_path("#{File.dirname(__FILE__)}/../../jetty"),
           :startup_wait => 45,
+          :java_opts => ["-Xmx256m", '-XX:MaxPermSize=256m'],
           :jetty_port => TEST_JETTY_PORTS.first
         }
         Jettywrapper.configure(jetty_params) 
@@ -46,7 +49,7 @@ module Hydra
         ts.stop
         ts.start
         ts.logger.debug "Jetty started from rspec at #{ts.pid}"
-        response = Net::HTTP.get_response(URI.parse("http://localhost:#{jetty_params[:jetty_port]}/solr/development/admin/"))
+        response = Net::HTTP.get_response(URI.parse("http://localhost:#{jetty_params[:jetty_port]}/solr/"))
         response.code.should eql("200")
         lambda { ts.start }.should raise_exception(/Server is already running/)
         ts.stop
@@ -56,6 +59,7 @@ module Hydra
         jetty_params = {
           :jetty_home => File.expand_path("#{File.dirname(__FILE__)}/../../jetty"),
           :jetty_port => TEST_JETTY_PORTS.last,
+          :java_opts => ["-Xmx256m", '-XX:MaxPermSize=256m'],
           :startup_wait => 30
         }
         Jettywrapper.stop(jetty_params) 

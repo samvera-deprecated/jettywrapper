@@ -11,3 +11,4 @@ doc
 tmp/
 .rvmrc
 jettywrapper.log
+jetty
