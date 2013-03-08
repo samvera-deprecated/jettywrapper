@@ -21,14 +21,14 @@ require 'rubygems'
     context "downloading" do
       context "with default file" do
         it "should download the zip file" do
-          Jettywrapper.should_receive(:system).with('curl -L https://github.com/projecthydra/hydra-jetty/archive/new-solr-schema.zip -o tmp/new-solr-schema.zip').and_return(system (':'))
+          Jettywrapper.should_receive(:system).with('curl -L https://github.com/projecthydra/hydra-jetty/archive/new-solr-schema.zip -o tmp/new-solr-schema.zip').and_return(system ('true'))
           Jettywrapper.download
         end
       end
 
       context "specifying the file" do
         it "should download the zip file" do
-          Jettywrapper.should_receive(:system).with('curl -L http://example.co/file.zip -o tmp/file.zip').and_return(system (':'))
+          Jettywrapper.should_receive(:system).with('curl -L http://example.co/file.zip -o tmp/file.zip').and_return(system ('true'))
           Jettywrapper.download('http://example.co/file.zip')
           Jettywrapper.url.should == 'http://example.co/file.zip'
         end
@@ -43,8 +43,8 @@ require 'rubygems'
         it "should download the zip file" do
           File.should_receive(:exists?).and_return(true)
           Jettywrapper.should_receive(:expanded_zip_dir).and_return('tmp/jetty_generator/hydra-jetty-new-solr-schema')
-          Jettywrapper.should_receive(:system).with('unzip -d tmp/jetty_generator -qo tmp/new-solr-schema.zip').and_return(system (':'))
-          Jettywrapper.should_receive(:system).with('mv tmp/jetty_generator/hydra-jetty-new-solr-schema jetty').and_return(system (':'))
+          Jettywrapper.should_receive(:system).with('unzip -d tmp/jetty_generator -qo tmp/new-solr-schema.zip').and_return(system ('true'))
+          Jettywrapper.should_receive(:system).with('mv tmp/jetty_generator/hydra-jetty-new-solr-schema jetty').and_return(system ('true'))
           Jettywrapper.unzip
         end
       end
@@ -56,8 +56,8 @@ require 'rubygems'
         it "should download the zip file" do
           File.should_receive(:exists?).and_return(true)
           Jettywrapper.should_receive(:expanded_zip_dir).and_return('tmp/jetty_generator/interal_dir')
-          Jettywrapper.should_receive(:system).with('unzip -d tmp/jetty_generator -qo tmp/file.zip').and_return(system (':'))
-          Jettywrapper.should_receive(:system).with('mv tmp/jetty_generator/interal_dir jetty').and_return(system (':'))
+          Jettywrapper.should_receive(:system).with('unzip -d tmp/jetty_generator -qo tmp/file.zip').and_return(system ('true'))
+          Jettywrapper.should_receive(:system).with('mv tmp/jetty_generator/interal_dir jetty').and_return(system ('true'))
           Jettywrapper.unzip
         end
       end
