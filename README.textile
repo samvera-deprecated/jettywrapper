@@ -5,6 +5,7 @@ This gem is designed to make it easier to integrate a jetty servlet container in
 Jettywrapper provides rake tasks for starting and stopping jetty, as well as a method (Jettywrapper.wrap) that will start the server before the block and stop the server after the block, which is useful for automated testing.
 
 jettywrapper supports 
+  ruby 2.0.0
   ruby 1.9.3 
   ruby 1.8.7 
   ree  1.8.7
