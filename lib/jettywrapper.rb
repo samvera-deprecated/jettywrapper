@@ -67,6 +67,7 @@ class Jettywrapper
     def download(url = 'https://github.com/projecthydra/hydra-jetty/archive/new-solr-schema.zip')
       self.url = url
       logger.info "Downloading jetty..."
+      FileUtils.mkdir tmp_dir unless File.exists? tmp_dir
       system "curl -L #{url} -o #{zip_file}"
       abort "Unable to download jetty from #{url}" unless $?.success?
     end
