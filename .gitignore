@@ -10,3 +10,4 @@ coverage.data
 doc
 tmp/
 .rvmrc
+jettywrapper.log
