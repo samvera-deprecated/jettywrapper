@@ -9,10 +9,12 @@ namespace :jetty do
     Jettywrapper.download
   end
 
+  desc "unzip the downloaded jetty archive"
   task :unzip do
     Jettywrapper.unzip
   end
 
+  desc "remove the jetty directory and recreate it"
   task :clean do
     Jettywrapper.clean
   end
