@@ -9,7 +9,11 @@ require 'active_support/core_ext/hash'
 require 'erb'
 require 'yaml'
 
-Dir[File.expand_path(File.join(File.dirname(__FILE__),"tasks/*.rake"))].each { |ext| load ext } if defined?(Rake)
+if defined?(Rails)
+  require 'jettywrapper/railtie'
+elsif defined?(Rake)
+  Dir[File.expand_path(File.join(File.dirname(__FILE__),"tasks/*.rake"))].each { |ext| load ext }
+end
 
 
 # Jettywrapper is a Singleton class, so you can only create one jetty instance at a time.
