@@ -69,7 +69,7 @@ class Jettywrapper
       logger.info "Downloading jetty at #{self.url} ..."
       FileUtils.mkdir tmp_dir unless File.exists? tmp_dir
       system "curl -L #{self.url} -o #{zip_file}"
-      abort "Unable to download jetty from #{url}" unless $?.success?
+      abort "Unable to download jetty from #{self.url}" unless $?.success?
     end
     
     def unzip
