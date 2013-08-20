@@ -79,6 +79,10 @@ class Jettywrapper
       system "unzip -d #{tmp_save_dir} -qo #{zip_file}"
       abort "Unable to unzip #{zip_file} into tmp_save_dir/" unless $?.success?
 
+      # Remove the old jetty directory if it exists
+      system "rm -r #{jetty_dir}" if File.directory?(jetty_dir)
+
+      # Move the expanded zip file into the final destination.
       expanded_dir = expanded_zip_dir(tmp_save_dir)
       system "mv #{expanded_dir} #{jetty_dir}"
       abort "Unable to move #{expanded_dir} into #{jetty_dir}/" unless $?.success?
