@@ -44,7 +44,7 @@ class Jettywrapper
     end
 
     def url
-      @url ||= defined?(ZIP_URL) ? ZIP_URL : 'https://github.com/projecthydra/hydra-jetty/archive/new-solr-schema.zip'
+      @url ||= defined?(ZIP_URL) ? ZIP_URL : 'https://github.com/projecthydra/hydra-jetty/archive/v5.2.0.zip'
       @url
     end
 
