@@ -44,6 +44,7 @@ require 'rubygems'
           File.should_receive(:exists?).and_return(true)
           Jettywrapper.should_receive(:expanded_zip_dir).and_return('tmp/jetty_generator/hydra-jetty-new-solr-schema')
           Jettywrapper.should_receive(:system).with('unzip -d tmp/jetty_generator -qo tmp/new-solr-schema.zip').and_return(system ('true'))
+          Jettywrapper.should_receive(:system).with('rm -r jetty').and_return(system ('true'))
           Jettywrapper.should_receive(:system).with('mv tmp/jetty_generator/hydra-jetty-new-solr-schema jetty').and_return(system ('true'))
           Jettywrapper.unzip
         end
@@ -57,6 +58,7 @@ require 'rubygems'
           File.should_receive(:exists?).and_return(true)
           Jettywrapper.should_receive(:expanded_zip_dir).and_return('tmp/jetty_generator/interal_dir')
           Jettywrapper.should_receive(:system).with('unzip -d tmp/jetty_generator -qo tmp/file.zip').and_return(system ('true'))
+          Jettywrapper.should_receive(:system).with('rm -r jetty').and_return(system ('true'))
           Jettywrapper.should_receive(:system).with('mv tmp/jetty_generator/interal_dir jetty').and_return(system ('true'))
           Jettywrapper.unzip
         end
