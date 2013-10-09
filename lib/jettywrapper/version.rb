@@ -1,1 +1,3 @@
-GEMVERSION = "1.4.1"
+class Jettywrapper
+  VERSION = "1.4.2"
+end
