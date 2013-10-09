@@ -188,11 +188,6 @@ require 'rubygems'
         ts.jetty_opts.should == @jetty_params[:jetty_opts]
       end
 
-      # passing in a hash is no longer optional
-      it "raises an error when called without a :jetty_home value" do
-          lambda { ts = Jettywrapper.configure }.should raise_exception
-      end
-
       it "should override nil params with defaults" do
         jetty_params = {
           :quiet => nil,
