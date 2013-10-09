@@ -105,14 +105,9 @@ class Jettywrapper
 
     def app_root
       return @app_root if @app_root
-      if defined?(Rails.root)
-        @app_root = Rails.root
-      elsif defined?(APP_ROOT)
-        @app_root = APP_ROOT
-      else
-        @app_root = '.'
-      end
-      @app_root
+      @app_root = Rails.root if defined?(Rails.root)
+      @app_root ||= APP_ROOT if defined?(APP_ROOT)
+      @app_root ||= '.'
     end
     
     def load_config
@@ -163,14 +158,8 @@ class Jettywrapper
       jetty_server = self.instance
       jetty_server.reset_process!
       jetty_server.quiet = params[:quiet].nil? ? true : params[:quiet]
-      if defined?(Rails.root)
-       base_path = Rails.root
-      elsif defined?(APP_ROOT)
-       base_path = APP_ROOT
-      else
-       raise "You must set either Rails.root, APP_ROOT or pass :jetty_home as a parameter so I know where jetty is" unless params[:jetty_home]
-      end
-      jetty_server.jetty_home = params[:jetty_home] || File.expand_path(File.join(base_path, 'jetty'))
+
+      jetty_server.jetty_home = params[:jetty_home] || File.expand_path(File.join(app_root, 'jetty'))
       jetty_server.solr_home = params[:solr_home]  || File.join( jetty_server.jetty_home, "solr")
       jetty_server.port = params[:jetty_port] || 8888
       jetty_server.startup_wait = params[:startup_wait] || 5

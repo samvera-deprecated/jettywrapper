@@ -5,7 +5,7 @@ require 'bundler'
 
 Gem::Specification.new do |s|
   s.name        = "jettywrapper"
-  s.version     = GEMVERSION
+  s.version     = Jettywrapper::VERSION
   s.platform    = Gem::Platform::RUBY
   s.authors     = ["Chris Beer", "Justin Coyne", "Bess Sadler"]
   s.email       = ["hydra-tech@googlegroups.com"]
