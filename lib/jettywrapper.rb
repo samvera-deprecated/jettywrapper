@@ -39,17 +39,14 @@ class Jettywrapper
   # Methods outside the class << self block must be called on Jettywrapper.instance, as instance methods.
   class << self
 
-    def url=(url)
-      @url = url
+    attr_writer :hydra_jetty_version, :url, :tmp_dir
+    def hydra_jetty_version
+      @hydra_jetty_version ||= 'v7.0.0'
     end
 
     def url
-      @url ||= defined?(ZIP_URL) ? ZIP_URL : 'https://github.com/projecthydra/hydra-jetty/archive/v5.2.0.zip'
+      @url ||= defined?(ZIP_URL) ? ZIP_URL : "https://github.com/projecthydra/hydra-jetty/archive/#{hydra_jetty_version}.zip"
       @url
-    end
-
-    def tmp_dir=(dir)
-      @tmp_dir = dir
     end
 
     def tmp_dir
@@ -101,6 +98,8 @@ class Jettywrapper
 
     def reset_config
       @app_root = nil
+      @url = nil
+      @hydra_jetty_version = nil
     end
 
     def app_root
