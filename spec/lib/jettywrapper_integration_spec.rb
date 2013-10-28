@@ -15,7 +15,7 @@ module Hydra
       it "starts" do
         jetty_params = {
           :jetty_home => File.expand_path("#{File.dirname(__FILE__)}/../../jetty"),
-          :startup_wait => 45,
+          :startup_wait => 90,
           :java_opts => ["-Xmx256m", '-XX:MaxPermSize=256m'],
           :jetty_port => TEST_JETTY_PORTS.first
         }
@@ -39,7 +39,7 @@ module Hydra
       it "won't start if it's already running" do
         jetty_params = {
           :jetty_home => File.expand_path("#{File.dirname(__FILE__)}/../../jetty"),
-          :startup_wait => 45,
+          :startup_wait => 90,
           :java_opts => ["-Xmx256m", '-XX:MaxPermSize=256m'],
           :jetty_port => TEST_JETTY_PORTS.first
         }

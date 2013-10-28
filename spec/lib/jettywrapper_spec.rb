@@ -19,9 +19,13 @@ require 'rubygems'
     end
 
     context "downloading" do
+      after do
+        Jettywrapper.reset_config
+      end
+
       context "with default file" do
         it "should download the zip file" do
-          Jettywrapper.should_receive(:system).with('curl -L https://github.com/projecthydra/hydra-jetty/archive/v5.2.0.zip -o tmp/v5.2.0.zip').and_return(system ('true'))
+          Jettywrapper.should_receive(:system).with('curl -L https://github.com/projecthydra/hydra-jetty/archive/v7.0.0.zip -o tmp/v7.0.0.zip').and_return(system ('true'))
           Jettywrapper.download
         end
       end
@@ -33,6 +37,13 @@ require 'rubygems'
           Jettywrapper.url.should == 'http://example.co/file.zip'
         end
       end
+      context "specifying the version" do
+        it "should download the zip file" do
+          Jettywrapper.should_receive(:system).with('curl -L https://github.com/projecthydra/hydra-jetty/archive/v9.9.9.zip -o tmp/v9.9.9.zip').and_return(system ('true'))
+          Jettywrapper.hydra_jetty_version = 'v9.9.9'
+          Jettywrapper.download
+        end
+      end
     end
 
     context "unzip" do
@@ -42,10 +53,10 @@ require 'rubygems'
       context "with default file" do
         it "should download the zip file" do
           File.should_receive(:exists?).and_return(true)
-          Jettywrapper.should_receive(:expanded_zip_dir).and_return('tmp/jetty_generator/hydra-jetty-v5.2.0')
-          Jettywrapper.should_receive(:system).with('unzip -d tmp/jetty_generator -qo tmp/v5.2.0.zip').and_return(system ('true'))
+          Jettywrapper.should_receive(:expanded_zip_dir).and_return('tmp/jetty_generator/hydra-jetty-v7.0.0')
+          Jettywrapper.should_receive(:system).with('unzip -d tmp/jetty_generator -qo tmp/v7.0.0.zip').and_return(system ('true'))
           Jettywrapper.should_receive(:system).with('rm -r jetty').and_return(system ('true'))
-          Jettywrapper.should_receive(:system).with('mv tmp/jetty_generator/hydra-jetty-v5.2.0 jetty').and_return(system ('true'))
+          Jettywrapper.should_receive(:system).with('mv tmp/jetty_generator/hydra-jetty-v7.0.0 jetty').and_return(system ('true'))
           Jettywrapper.unzip
         end
       end
@@ -86,7 +97,7 @@ require 'rubygems'
         its(:url) {should == 'http://example.com/bar.zip'}
       end
       context "when url is not set" do
-        its(:url) {should == 'https://github.com/projecthydra/hydra-jetty/archive/v5.2.0.zip'}
+        its(:url) {should == 'https://github.com/projecthydra/hydra-jetty/archive/v7.0.0.zip'}
       end
     end
 
@@ -228,7 +239,7 @@ require 'rubygems'
           :jetty_home => '/tmp'
         }
         ts = Jettywrapper.configure(jetty_params) 
-        Jettywrapper.any_instance.stub(:process).and_return(stub('proc', :start => nil, :pid=>5454))
+        Jettywrapper.any_instance.stub(:process).and_return(double('proc', :start => nil, :pid=>5454))
         ts.stop
         ts.start
         ts.pid.should eql(5454)
@@ -241,7 +252,7 @@ require 'rubygems'
         }
         ts = Jettywrapper.configure(jetty_params) 
         ts.stop
-        Jettywrapper.any_instance.stub(:process).and_return(stub('proc', :start => nil, :pid=>2323))
+        Jettywrapper.any_instance.stub(:process).and_return(double('proc', :start => nil, :pid=>2323))
         swp = Jettywrapper.start(jetty_params)
         swp.pid.should eql(2323)
         swp.pid_file.should eql("_tmp.pid")
@@ -253,7 +264,7 @@ require 'rubygems'
       # return true if it's running, otherwise return false
       it "can get the status for a given jetty instance" do
         # Don't actually start jetty, just fake it
-        Jettywrapper.any_instance.stub(:process).and_return(stub('proc', :start => nil, :pid=>12345))
+        Jettywrapper.any_instance.stub(:process).and_return(double('proc', :start => nil, :pid=>12345))
         
         jetty_params = {
           :jetty_home => File.expand_path("#{File.dirname(__FILE__)}/../../jetty")
@@ -267,7 +278,7 @@ require 'rubygems'
       
       it "can get the pid for a given jetty instance" do
         # Don't actually start jetty, just fake it
-        Jettywrapper.any_instance.stub(:process).and_return(stub('proc', :start => nil, :pid=>54321))
+        Jettywrapper.any_instance.stub(:process).and_return(double('proc', :start => nil, :pid=>54321))
         jetty_params = {
           :jetty_home => File.expand_path("#{File.dirname(__FILE__)}/../../jetty")
         }
@@ -282,7 +293,7 @@ require 'rubygems'
         jetty_params = {
           :jetty_home => '/tmp', :jetty_port => 8777
         }
-        Jettywrapper.any_instance.stub(:process).and_return(stub('proc', :start => nil, :pid=>2323))
+        Jettywrapper.any_instance.stub(:process).and_return(double('proc', :start => nil, :pid=>2323))
         swp = Jettywrapper.start(jetty_params)
         (File.file? swp.pid_path).should eql(true)
         
@@ -305,7 +316,7 @@ require 'rubygems'
           :jetty_home => '/tmp'
         }
         ts = Jettywrapper.configure(jetty_params) 
-        Jettywrapper.any_instance.stub(:process).and_return(stub('proc', :start => nil, :pid=>2222))
+        Jettywrapper.any_instance.stub(:process).and_return(double('proc', :start => nil, :pid=>2222))
         ts.stop
         ts.pid_file?.should eql(false)
         ts.start
