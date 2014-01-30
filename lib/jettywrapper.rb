@@ -108,14 +108,12 @@ class Jettywrapper
       @app_root ||= APP_ROOT if defined?(APP_ROOT)
       @app_root ||= '.'
     end
-    
-    def load_config
-      if defined? Rails 
-        config_name =  Rails.env 
-      else 
-        config_name =  ENV['environment']
-      end
 
+    def env
+      defined?(Rails) ? Rails.env : ENV['environment'] 
+    end
+    
+    def load_config(config_name = env)
       jetty_file = "#{app_root}/config/jetty.yml"
 
       unless File.exists?(jetty_file)
@@ -124,23 +122,23 @@ class Jettywrapper
       end
 
       begin
-        @jetty_erb = ERB.new(IO.read(jetty_file)).result(binding)
-      rescue Exception => e
+        jetty_erb = ERB.new(IO.read(jetty_file)).result(binding)
+      rescue
         raise("jetty.yml was found, but could not be parsed with ERB. \n#{$!.inspect}")
       end
 
       begin
-        @jetty_yml = YAML::load(@jetty_erb)
-      rescue StandardError => e
+        jetty_yml = YAML::load(jetty_erb)
+      rescue
         raise("jetty.yml was found, but could not be parsed.\n")
       end
 
-      if @jetty_yml.nil? || !@jetty_yml.is_a?(Hash)
+      if jetty_yml.nil? || !jetty_yml.is_a?(Hash)
         raise("jetty.yml was found, but was blank or malformed.\n")
       end
 
-      config = @jetty_yml.with_indifferent_access
-      config[config_name] || config[:default]
+      config = jetty_yml.with_indifferent_access
+      config[config_name] || config['default'.freeze]
     end
     
 

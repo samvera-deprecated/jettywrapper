@@ -175,6 +175,12 @@ require 'rubygems'
         config[:a].should == 2
       end
 
+      it "should take the env as an argument to load_config" do
+        IO.should_receive(:read).with('./config/jetty.yml').and_return("default:\n  a: 1\nfoo:\n  a: 2")
+        config = Jettywrapper.load_config('foo')
+        config[:a].should == 2
+      end
+
       it "falls back on a 'default' environment configuration" do
         ENV['environment'] = 'test'
         IO.should_receive(:read).with('./config/jetty.yml').and_return("default:\n  a: 1")
