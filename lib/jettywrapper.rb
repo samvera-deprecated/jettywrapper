@@ -412,10 +412,9 @@ class Jettywrapper
     #    /usr/local/jetty1 => _usr_local_jetty1.pid
     def jetty_home_to_pid_file(jetty_home)
       begin
-        jetty_home.gsub(/\//,'_') << ".pid"
-      rescue
-        raise "Couldn't make a pid file for jetty_home value #{jetty_home}"
-        raise $!
+        jetty_home.gsub(/\//,'_') << "_#{self.class.env}" << ".pid"
+      rescue Exception => e
+        raise "Couldn't make a pid file for jetty_home value #{jetty_home}\n  Caused by: #{e}"
       end
     end
 
