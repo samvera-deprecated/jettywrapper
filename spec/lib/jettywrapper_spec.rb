@@ -18,11 +18,11 @@ require 'rubygems'
       Jettywrapper.logger.level=3
     end
 
-    context "downloading" do
-      after do
-        Jettywrapper.reset_config
-      end
+    before do
+      Jettywrapper.reset_config
+    end
 
+    context "downloading" do
       context "with default file" do
         it "should download the zip file" do
           Jettywrapper.should_receive(:system).with('curl -L https://github.com/projecthydra/hydra-jetty/archive/v7.0.0.zip -o tmp/v7.0.0.zip').and_return(system ('true'))
@@ -122,7 +122,6 @@ require 'rubygems'
       subject {Jettywrapper}
       context "When rails is present" do
         before do
-          Jettywrapper.reset_config
           class Rails
             def self.root
               'rails_root'
@@ -131,7 +130,6 @@ require 'rubygems'
         end
         after do
           Object.send(:remove_const, :Rails)
-          Jettywrapper.reset_config
         end
         its(:app_root) {should == 'rails_root'}
       end
@@ -141,7 +139,6 @@ require 'rubygems'
         end
         after do
           Object.send(:remove_const, :APP_ROOT)
-          Jettywrapper.reset_config
         end
         its(:app_root) {should == 'custom_root'}
       end
@@ -151,6 +148,8 @@ require 'rubygems'
     end
 
     context "config" do
+      before do
+      end
       it "loads the application jetty.yml first" do
         IO.should_receive(:read).with('./config/jetty.yml').and_return("default:\n")
         config = Jettywrapper.load_config
@@ -175,10 +174,11 @@ require 'rubygems'
         config[:a].should == 2
       end
 
-      it "should take the env as an argument to load_config" do
+      it "should take the env as an argument to load_config and the env should be sticky" do
         IO.should_receive(:read).with('./config/jetty.yml').and_return("default:\n  a: 1\nfoo:\n  a: 2")
         config = Jettywrapper.load_config('foo')
         config[:a].should == 2
+        expect(Jettywrapper.env).to eq 'foo'
       end
 
       it "falls back on a 'default' environment configuration" do
@@ -265,9 +265,6 @@ require 'rubygems'
         swp.stop
       end
       
-      it "checks to see if its pid files are stale"
-      
-      # return true if it's running, otherwise return false
       it "can get the status for a given jetty instance" do
         # Don't actually start jetty, just fake it
         Jettywrapper.any_instance.stub(:process).and_return(double('proc', :start => nil, :pid=>12345))
@@ -307,9 +304,20 @@ require 'rubygems'
         (File.file? swp.pid_path).should eql(false)
       end
       
-      it "knows what its pid file should be called" do
-        ts = Jettywrapper.configure(@jetty_params) 
-        ts.pid_file.should eql("_path_to_jetty_test.pid")
+      describe "creates a pid file" do
+        let(:ts) { Jettywrapper.configure(@jetty_params) }
+        describe "when the environment isn't set" do
+          before { ENV['environment'] = nil }
+          it "should have the path and env in the name" do
+            ts.pid_file.should eql("_path_to_jetty_development.pid")
+          end
+        end
+        describe "when the environment is set" do
+          before { ENV['environment'] = 'test' }
+          it "should have the path and env in the name" do
+            ts.pid_file.should eql("_path_to_jetty_test.pid")
+          end
+        end
       end
       
       it "knows where its pid file should be written" do
