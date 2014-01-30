@@ -98,6 +98,7 @@ class Jettywrapper
 
     def reset_config
       @app_root = nil
+      @env = nil
       @url = nil
       @hydra_jetty_version = nil
     end
@@ -110,10 +111,11 @@ class Jettywrapper
     end
 
     def env
-      defined?(Rails) ? Rails.env : ENV['environment'] 
+      @env ||= defined?(Rails) ? Rails.env : ENV['environment'] || 'development'
     end
     
     def load_config(config_name = env)
+      @env = config_name
       jetty_file = "#{app_root}/config/jetty.yml"
 
       unless File.exists?(jetty_file)
