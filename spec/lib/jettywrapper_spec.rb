@@ -261,7 +261,7 @@ require 'rubygems'
         Jettywrapper.any_instance.stub(:process).and_return(double('proc', :start => nil, :pid=>2323))
         swp = Jettywrapper.start(jetty_params)
         swp.pid.should eql(2323)
-        swp.pid_file.should eql("_tmp.pid")
+        swp.pid_file.should eql("_tmp_test.pid")
         swp.stop
       end
       
@@ -309,7 +309,7 @@ require 'rubygems'
       
       it "knows what its pid file should be called" do
         ts = Jettywrapper.configure(@jetty_params) 
-        ts.pid_file.should eql("_path_to_jetty.pid")
+        ts.pid_file.should eql("_path_to_jetty_test.pid")
       end
       
       it "knows where its pid file should be written" do
