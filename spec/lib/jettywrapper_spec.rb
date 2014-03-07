@@ -118,6 +118,22 @@ require 'rubygems'
 
     end
 
+    context ".jetty_dir" do
+      subject {Jettywrapper}
+      context "when a dir is set" do
+        before do
+          subject.jetty_dir = '/opt/jetty'
+        end
+        its(:jetty_dir) {should == '/opt/jetty'}
+      end
+      context "when dir is not set" do
+        before do
+          subject.jetty_dir = nil
+        end
+        its(:jetty_dir) {should == 'jetty'}
+      end
+    end
+
     context "app_root" do
       subject {Jettywrapper}
       context "When rails is present" do

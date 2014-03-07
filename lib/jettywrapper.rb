@@ -39,7 +39,7 @@ class Jettywrapper
   # Methods outside the class << self block must be called on Jettywrapper.instance, as instance methods.
   class << self
 
-    attr_writer :hydra_jetty_version, :url, :tmp_dir
+    attr_writer :hydra_jetty_version, :url, :tmp_dir, :jetty_dir
     def hydra_jetty_version
       @hydra_jetty_version ||= 'v7.0.0'
     end
@@ -58,7 +58,7 @@ class Jettywrapper
     end
 
     def jetty_dir
-      'jetty'
+      @jetty_dir ||= 'jetty'
     end
 
     def download(url = nil)
