@@ -55,7 +55,7 @@ class Jettywrapper
     end
 
     def zip_file
-      File.join tmp_dir, url.split('/').last
+      ENV['JETTY_ZIP'] || File.join(tmp_dir, url.split('/').last)
     end
 
     def jetty_dir
