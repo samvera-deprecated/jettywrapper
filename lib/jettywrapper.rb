@@ -111,7 +111,7 @@ class Jettywrapper
     end
 
     def env
-      @env ||= defined?(Rails) ? Rails.env : ENV['environment'] || 'development'
+      @env ||= defined?(Rails) && Rails.respond_to?(:env) ? Rails.env : ENV['environment'] || 'development'
     end
     
     def load_config(config_name = env)
