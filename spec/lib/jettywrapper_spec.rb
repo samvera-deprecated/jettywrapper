@@ -162,6 +162,47 @@ require 'rubygems'
         its(:app_root) {should == '.'}
       end
     end
+    
+    describe "env" do
+      before do
+        ENV.delete('JETTYWRAPPER_ENV')
+        ENV.delete('RAILS_ENV')
+        ENV.delete('environment')
+      end
+      
+      it "should have a setter" do
+        Jettywrapper.env = "abc"
+        expect(Jettywrapper.env).to eq "abc"  
+      end
+      
+      it "should load the ENV['JETTYWRAPPER_ENV']" do
+        ENV['JETTYWRAPPER_ENV'] = 'test'
+        ENV['RAILS_ENV'] = 'test2'
+        ENV['environment'] = 'test3'
+        expect(Jettywrapper.env).to eq "test"
+      end
+      
+      it "should be the Rails environment" do
+        Rails = double(env: 'test')
+        expect(Jettywrapper.env).to eq "test"
+      end
+      
+      it "should use the ENV['RAILS_ENV']" do
+        ENV['RAILS_ENV'] = 'test2'
+        ENV['environment'] = 'test3'
+        expect(Jettywrapper.env).to eq "test2"
+      end
+      
+      it "should load the ENV['environment']" do
+        ENV['environment'] = 'test3'
+        expect(Jettywrapper.env).to eq "test3"
+      end
+      
+      it "should default to 'development'" do
+        expect(Jettywrapper.env).to eq "development"
+      end
+      
+    end
 
     context "config" do
       before do

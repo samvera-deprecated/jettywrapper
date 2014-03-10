@@ -39,7 +39,8 @@ class Jettywrapper
   # Methods outside the class << self block must be called on Jettywrapper.instance, as instance methods.
   class << self
 
-    attr_writer :hydra_jetty_version, :url, :tmp_dir, :jetty_dir
+    attr_writer :hydra_jetty_version, :url, :tmp_dir, :jetty_dir, :env
+
     def hydra_jetty_version
       @hydra_jetty_version ||= 'v7.0.0'
     end
@@ -54,7 +55,7 @@ class Jettywrapper
     end
 
     def zip_file
-      File.join tmp_dir, url.split('/').last
+      ENV['JETTY_ZIP'] || File.join(tmp_dir, url.split('/').last)
     end
 
     def jetty_dir
@@ -105,13 +106,30 @@ class Jettywrapper
 
     def app_root
       return @app_root if @app_root
-      @app_root = Rails.root if defined?(Rails.root)
+      @app_root = Rails.root if defined?(Rails) and defined?(Rails.root)
       @app_root ||= APP_ROOT if defined?(APP_ROOT)
       @app_root ||= '.'
     end
 
     def env
-      @env ||= defined?(Rails) ? Rails.env : ENV['environment'] || 'development'
+      @env ||= begin
+        case 
+        when ENV['JETTYWRAPPER_ENV'] 
+          ENV['JETTYWRAPPER_ENV']
+        when defined?(Rails) && Rails.respond_to?(:env)
+          Rails.env
+        when ENV['RAILS_ENV'] 
+          ENV['RAILS_ENV'] 
+        when ENV['environment'] 
+          ENV['environment'] 
+        else
+          default_environment
+        end
+      end
+    end
+    
+    def default_environment
+      'development'
     end
     
     def load_config(config_name = env)
