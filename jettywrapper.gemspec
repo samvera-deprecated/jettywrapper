@@ -20,14 +20,13 @@ Gem::Specification.new do |s|
   s.required_rubygems_version = ">= 1.3.6"
   
   s.add_dependency "logger"
-  s.add_dependency "mediashelf-loggable"
   s.add_dependency "childprocess"
   s.add_dependency "i18n"
   s.add_dependency "activesupport", ">=3.0.0"
   
-  s.add_development_dependency "rspec"
+  s.add_development_dependency "rspec", '~> 2.99'
+  s.add_development_dependency "rspec-its"
   s.add_development_dependency 'rake'
-
   
   s.add_development_dependency 'yard'#, '0.6.5'  # Yard > 0.6.5 won't generate docs.
                                                 # I don't know why & don't have time to 

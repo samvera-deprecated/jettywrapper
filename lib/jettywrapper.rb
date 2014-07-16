@@ -1,4 +1,3 @@
-require 'loggable'
 require 'singleton'
 require 'fileutils'
 require 'shellwords'
@@ -16,7 +15,6 @@ Dir[File.expand_path(File.join(File.dirname(__FILE__),"tasks/*.rake"))].each { |
 class Jettywrapper
   
   include Singleton
-  include Loggable
   include ActiveSupport::Benchmarkable
   
   
@@ -304,155 +302,167 @@ class Jettywrapper
         return false
       end
     end
-    
-    end #end of class << self
-    
-        
-   # What command is being run to invoke jetty? 
-   def jetty_command
-     ["java", java_variables, java_opts, "-jar", "start.jar", jetty_opts].flatten
-   end
 
-   def java_variables
-     ["-Djetty.port=#{@port}",
-      "-Dsolr.solr.home=#{Shellwords.escape(@solr_home)}"]
-   end
-
-   # Start the jetty server. Check the pid file to see if it is running already, 
-   # and stop it if so. After you start jetty, write the PID to a file. 
-   # This is the instance start method. It must be called on Jettywrapper.instance
-   # You're probably better off using Jettywrapper.start(:jetty_home => "/path/to/jetty")
-   # @example
-   #    Jettywrapper.configure(params)
-   #    Jettywrapper.instance.start
-   #    return Jettywrapper.instance
-   def start
-     logger.debug "Starting jetty with these values: "
-     logger.debug "jetty_home: #{@jetty_home}"
-     logger.debug "jetty_command: #{jetty_command.join(' ')}"
-     
-     # Check to see if we can start.
-     # 1. If there is a pid, check to see if it is really running
-     # 2. Check to see if anything is blocking the port we want to use     
-     if pid
-       if Jettywrapper.is_pid_running?(pid)
-         raise("Server is already running with PID #{pid}")
-       else
-         logger.warn "Removing stale PID file at #{pid_path}"
-         File.delete(pid_path)
-       end
-     end
-     if Jettywrapper.is_port_in_use?(self.port)
-       raise("Port #{self.port} is already in use.")
-     end
-     benchmark "Started jetty" do
-       Dir.chdir(@jetty_home) do
-         process.start
-       end
-       FileUtils.makedirs(pid_dir) unless File.directory?(pid_dir)
-       begin
-         f = File.new(pid_path,  "w")
-       rescue Errno::ENOENT, Errno::EACCES
-         f = File.new(File.join(base_path,'tmp',pid_file),"w")
-       end
-       f.puts "#{process.pid}"
-       f.close
-       logger.debug "Wrote pid file to #{pid_path} with value #{process.pid}"
-       startup_wait!
-     end
-   end
-
-   # Wait for the jetty server to start and begin listening for requests
-   def startup_wait!
-     begin
-     Timeout::timeout(startup_wait) do
-       sleep 1 until (Jettywrapper.is_port_in_use? self.port)
-     end 
-     rescue Timeout::Error
-       logger.warn "Waited #{startup_wait} seconds for jetty to start, but it is not yet listening on port #{self.port}. Continuing anyway."
-     end
-   end
- 
-   def process
-     @process ||= begin
-        process = ChildProcess.build(*jetty_command)
-        if self.quiet
-          process.io.stderr = File.open(File.expand_path("jettywrapper.log"), "w+")
-          process.io.stdout = process.io.stderr
-           logger.warn "Logging jettywrapper stdout to #{File.expand_path(process.io.stderr.path)}"
-        else
-          process.io.inherit!
-        end
-        process.detach = true
-
-        process
-      end
-   end
-
-   def reset_process!
-     @process = nil
-   end
-   # Instance stop method. Must be called on Jettywrapper.instance
-   # You're probably better off using Jettywrapper.stop(:jetty_home => "/path/to/jetty")
-   # @example
-   #    Jettywrapper.configure(params)
-   #    Jettywrapper.instance.stop
-   #    return Jettywrapper.instance
-   def stop    
-     logger.debug "Instance stop method called for pid '#{pid}'"
-     if pid
-       if @process
-         @process.stop
-       else
-         Process.kill("KILL", pid) rescue nil
-       end
-
-       begin
-         File.delete(pid_path)
-       rescue
-       end
-     end
-   end
- 
-
-   # The fully qualified path to the pid_file
-   def pid_path
-     #need to memoize this, becasuse the base path could be relative and the cwd can change in the yield block of wrap
-     @path ||= File.join(pid_dir, pid_file)
-   end
-
-   # The file where the process ID will be written
-   def pid_file
-     jetty_home_to_pid_file(@jetty_home)
-   end
-   
-    # Take the @jetty_home value and transform it into a legal filename
-    # @return [String] the name of the pid_file
-    # @example
-    #    /usr/local/jetty1 => _usr_local_jetty1.pid
-    def jetty_home_to_pid_file(jetty_home)
-      begin
-        jetty_home.gsub(/\//,'_') << "_#{self.class.env}" << ".pid"
-      rescue Exception => e
-        raise "Couldn't make a pid file for jetty_home value #{jetty_home}\n  Caused by: #{e}"
-      end
+    def logger=(logger)
+      @@logger = logger
+    end
+  
+    # If ::Rails.logger is defined, that will be returned.
+    # If no logger has been defined, a new STDOUT Logger will be created.
+    def logger
+      @@logger ||= defined?(::Rails) ? ::Rails.logger : ::Logger.new(STDOUT)
     end
 
-   # The directory where the pid_file will be written
-   def pid_dir
-     File.expand_path(File.join(base_path,'tmp','pids'))
-   end
-   
-   # Check to see if there is a pid file already
-   # @return true if the file exists, otherwise false
-   def pid_file?
-      return true if File.exist?(pid_path)
-      false
-   end
+  end #end of class << self
+    
+  def logger
+    self.class.logger
+  end
+        
+  # What command is being run to invoke jetty? 
+  def jetty_command
+    ["java", java_variables, java_opts, "-jar", "start.jar", jetty_opts].flatten
+  end
 
-   # the process id of the currently running jetty instance
-   def pid
-      File.open( pid_path ) { |f| return f.gets.to_i } if File.exist?(pid_path)
-   end
+  def java_variables
+    ["-Djetty.port=#{@port}",
+     "-Dsolr.solr.home=#{Shellwords.escape(@solr_home)}"]
+  end
+
+  # Start the jetty server. Check the pid file to see if it is running already, 
+  # and stop it if so. After you start jetty, write the PID to a file. 
+  # This is the instance start method. It must be called on Jettywrapper.instance
+  # You're probably better off using Jettywrapper.start(:jetty_home => "/path/to/jetty")
+  # @example
+  #    Jettywrapper.configure(params)
+  #    Jettywrapper.instance.start
+  #    return Jettywrapper.instance
+  def start
+    logger.debug "Starting jetty with these values: "
+    logger.debug "jetty_home: #{@jetty_home}"
+    logger.debug "jetty_command: #{jetty_command.join(' ')}"
    
+    # Check to see if we can start.
+    # 1. If there is a pid, check to see if it is really running
+    # 2. Check to see if anything is blocking the port we want to use     
+    if pid
+      if Jettywrapper.is_pid_running?(pid)
+        raise("Server is already running with PID #{pid}")
+      else
+        logger.warn "Removing stale PID file at #{pid_path}"
+        File.delete(pid_path)
+      end
+    end
+    if Jettywrapper.is_port_in_use?(self.port)
+      raise("Port #{self.port} is already in use.")
+    end
+    benchmark "Started jetty" do
+      Dir.chdir(@jetty_home) do
+        process.start
+      end
+      FileUtils.makedirs(pid_dir) unless File.directory?(pid_dir)
+      begin
+        f = File.new(pid_path,  "w")
+      rescue Errno::ENOENT, Errno::EACCES
+        f = File.new(File.join(base_path,'tmp',pid_file),"w")
+      end
+      f.puts "#{process.pid}"
+      f.close
+      logger.debug "Wrote pid file to #{pid_path} with value #{process.pid}"
+      startup_wait!
+    end
+  end
+
+  # Wait for the jetty server to start and begin listening for requests
+  def startup_wait!
+    begin
+    Timeout::timeout(startup_wait) do
+      sleep 1 until (Jettywrapper.is_port_in_use? self.port)
+    end 
+    rescue Timeout::Error
+      logger.warn "Waited #{startup_wait} seconds for jetty to start, but it is not yet listening on port #{self.port}. Continuing anyway."
+    end
+  end
+ 
+  def process
+    @process ||= begin
+       process = ChildProcess.build(*jetty_command)
+       if self.quiet
+         process.io.stderr = File.open(File.expand_path("jettywrapper.log"), "w+")
+         process.io.stdout = process.io.stderr
+         logger.warn "Logging jettywrapper stdout to #{File.expand_path(process.io.stderr.path)}"
+       else
+         process.io.inherit!
+       end
+       process.detach = true
+
+       process
+     end
+  end
+
+  def reset_process!
+    @process = nil
+  end
+
+  # Instance stop method. Must be called on Jettywrapper.instance
+  # You're probably better off using Jettywrapper.stop(:jetty_home => "/path/to/jetty")
+  # @example
+  #    Jettywrapper.configure(params)
+  #    Jettywrapper.instance.stop
+  #    return Jettywrapper.instance
+  def stop    
+    logger.debug "Instance stop method called for pid '#{pid}'"
+    if pid
+      if @process
+        @process.stop
+      else
+        Process.kill("KILL", pid) rescue nil
+      end
+
+      begin
+        File.delete(pid_path)
+      rescue
+      end
+    end
+  end
+ 
+
+  # The fully qualified path to the pid_file
+  def pid_path
+    #need to memoize this, becasuse the base path could be relative and the cwd can change in the yield block of wrap
+    @path ||= File.join(pid_dir, pid_file)
+  end
+
+  # The file where the process ID will be written
+  def pid_file
+    jetty_home_to_pid_file(@jetty_home)
+  end
+   
+  # Take the @jetty_home value and transform it into a legal filename
+  # @return [String] the name of the pid_file
+  # @example
+  #    /usr/local/jetty1 => _usr_local_jetty1.pid
+  def jetty_home_to_pid_file(jetty_home)
+    begin
+      jetty_home.gsub(/\//,'_') << "_#{self.class.env}" << ".pid"
+    rescue Exception => e
+      raise "Couldn't make a pid file for jetty_home value #{jetty_home}\n  Caused by: #{e}"
+    end
+  end
+
+  # The directory where the pid_file will be written
+  def pid_dir
+    File.expand_path(File.join(base_path,'tmp','pids'))
+  end
+   
+  # Check to see if there is a pid file already
+  # @return true if the file exists, otherwise false
+  def pid_file?
+    File.exist?(pid_path)
+  end
+
+  # the process id of the currently running jetty instance
+  def pid
+    File.open( pid_path ) { |f| return f.gets.to_i } if File.exist?(pid_path)
+  end
 end
