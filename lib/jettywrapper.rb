@@ -308,10 +308,10 @@ class Jettywrapper
       @@logger = logger
     end
   
-    # If ::Rails.logger is defined, that will be returned.
+    # If ::Rails.logger is defined and is not nil, it will be returned.
     # If no logger has been defined, a new STDOUT Logger will be created.
     def logger
-      @@logger ||= defined?(::Rails) ? ::Rails.logger : ::Logger.new(STDOUT)
+      @@logger ||= defined?(::Rails) && Rails.logger ? ::Rails.logger : ::Logger.new(STDOUT)
     end
 
   end #end of class << self
