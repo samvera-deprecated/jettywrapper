@@ -1,3 +1,6 @@
+1.8.0
+  2014-07-16: Removed mediashelf-loggable dependency [Justin Coyne]
+
 1.4.0
   Download jetty from a zip file
 
