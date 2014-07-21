@@ -71,7 +71,7 @@ class Jettywrapper
     
     def unzip
       download unless File.exists? zip_file
-      logger.info "Unpacking jetty..."
+      logger.info "Unpacking #{zip_file}..."
       tmp_save_dir = File.join tmp_dir, 'jetty_generator'
       system "unzip -d #{tmp_save_dir} -qo #{zip_file}"
       abort "Unable to unzip #{zip_file} into tmp_save_dir/" unless $?.success?
