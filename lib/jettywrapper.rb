@@ -9,7 +9,7 @@ require 'erb'
 require 'yaml'
 require 'logger'
 
-Dir[File.expand_path(File.join(File.dirname(__FILE__),"tasks/*.rake"))].each { |ext| load ext } if defined?(Rake)
+Dir[File.expand_path(File.join(File.dirname(__FILE__),"tasks/*.rake"))].each { |ext| load ext } if defined?(Rake) && respond_to?(:namespace)
 
 
 # Jettywrapper is a Singleton class, so you can only create one jetty instance at a time.
