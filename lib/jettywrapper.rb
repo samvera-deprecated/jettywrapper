@@ -4,6 +4,7 @@ require 'shellwords'
 require 'socket'
 require 'timeout'
 require 'childprocess'
+require 'active_support/benchmarkable'
 require 'active_support/core_ext/hash'
 require 'erb'
 require 'yaml'
@@ -14,12 +15,12 @@ Dir[File.expand_path(File.join(File.dirname(__FILE__),"tasks/*.rake"))].each { |
 
 # Jettywrapper is a Singleton class, so you can only create one jetty instance at a time.
 class Jettywrapper
-  
+
   include Singleton
   include ActiveSupport::Benchmarkable
-  
-  
-  attr_accessor :jetty_home   # Jetty's home directory 
+
+
+  attr_accessor :jetty_home   # Jetty's home directory
   attr_accessor :port         # Jetty's port.  Default is 8888.  Note that attribute is named port, but params passed in expect :jetty_port
   attr_accessor :startup_wait # How many seconds to wait for jetty to spin up. Default is 5.
   attr_accessor :quiet        # true (default) to reduce Jetty's output
@@ -27,14 +28,14 @@ class Jettywrapper
   attr_accessor :base_path    # The root of the application. Used for determining where log files and PID files should go.
   attr_accessor :java_opts    # Options to pass to java (ex. ["-Xmx512mb", "-Xms128mb"])
   attr_accessor :jetty_opts   # Options to pass to jetty (ex. ["etc/my_jetty.xml", "etc/other.xml"] as in http://wiki.eclipse.org/Jetty/Reference/jetty.xml_usage
-  
+
   # configure the singleton with some defaults
   def initialize(params = {})
     self.base_path = self.class.app_root
   end
 
-  
-  # Methods inside of the class << self block can be called directly on Jettywrapper, as class methods. 
+
+  # Methods inside of the class << self block can be called directly on Jettywrapper, as class methods.
   # Methods outside the class << self block must be called on Jettywrapper.instance, as instance methods.
   class << self
 
@@ -68,7 +69,7 @@ class Jettywrapper
       system "curl -L #{self.url} -o #{zip_file}"
       abort "Unable to download jetty from #{self.url}" unless $?.success?
     end
-    
+
     def unzip
       download unless File.exists? zip_file
       logger.info "Unpacking #{zip_file}..."
@@ -87,8 +88,8 @@ class Jettywrapper
 
     def expanded_zip_dir(tmp_save_dir)
       # This old way is more specific, but won't work for blacklight-jetty
-      #expanded_dir = Dir[File.join(tmp_save_dir, "hydra-jetty-*")].first        
-      Dir[File.join(tmp_save_dir, "*")].first        
+      #expanded_dir = Dir[File.join(tmp_save_dir, "hydra-jetty-*")].first
+      Dir[File.join(tmp_save_dir, "*")].first
     end
 
     def clean
@@ -112,25 +113,25 @@ class Jettywrapper
 
     def env
       @env ||= begin
-        case 
-        when ENV['JETTYWRAPPER_ENV'] 
+        case
+        when ENV['JETTYWRAPPER_ENV']
           ENV['JETTYWRAPPER_ENV']
         when defined?(Rails) && Rails.respond_to?(:env)
           Rails.env
-        when ENV['RAILS_ENV'] 
-          ENV['RAILS_ENV'] 
-        when ENV['environment'] 
-          ENV['environment'] 
+        when ENV['RAILS_ENV']
+          ENV['RAILS_ENV']
+        when ENV['environment']
+          ENV['environment']
         else
           default_environment
         end
       end
     end
-    
+
     def default_environment
       'development'
     end
-    
+
     def load_config(config_name = env)
       @env = config_name
       jetty_file = "#{app_root}/config/jetty.yml"
@@ -159,15 +160,15 @@ class Jettywrapper
       config = jetty_yml.with_indifferent_access
       config[config_name] || config['default'.freeze]
     end
-    
 
-    # Set the jetty parameters. It accepts a Hash of symbols. 
+
+    # Set the jetty parameters. It accepts a Hash of symbols.
     # @param [Hash<Symbol>] params
     #  :jetty_home Required. Jetty's home direcotry
     #  :jetty_port  Jetty's port.  Default is 8888.   Note that attribute is named port, but params passed in expect :jetty_port
     #  :startup_wait How many seconds to wait for jetty to spin up.  Default is 5. If jetty doesn't finish spinning up, tests can fail because they can't reach jetty.
     #  :solr_home Solr's home directory. Default is jetty_home/solr
-    #  :quiet Keep True(default) to reduce jetty's output 
+    #  :quiet Keep True(default) to reduce jetty's output
     #  :java_opts options to pass to the jvm (ex. ["-Xmx512mb", "-Xms128mb"])
     #  :jetty_opts options to pass to jetty (ex. ["etc/my_jetty.xml", "etc/other.xml"] as in http://wiki.eclipse.org/Jetty/Reference/jetty.xml_usage
     def configure(params = {})
@@ -183,25 +184,25 @@ class Jettywrapper
       jetty_server.jetty_opts = params[:jetty_opts] || []
       return jetty_server
     end
-   
-     
+
+
     # Wrap the tests. Startup jetty, yield to the test task, capture any errors, shutdown
-    # jetty, and return the error. 
+    # jetty, and return the error.
     # @example Using this method in a rake task
     #   require 'jettywrapper'
     #   desc "Spin up jetty and run tests against it"
     #   task :newtest do
-    #     jetty_params = { 
-    #       :jetty_home => "/path/to/jetty", 
-    #       :quiet => false, 
-    #       :jetty_port => 8983, 
+    #     jetty_params = {
+    #       :jetty_home => "/path/to/jetty",
+    #       :quiet => false,
+    #       :jetty_port => 8983,
     #       :startup_wait => 30,
     #       :jetty_opts => "/etc/jetty.xml"
     #     }
-    #     error = Jettywrapper.wrap(jetty_params) do   
-    #       Rake::Task["rake:spec"].invoke 
-    #       Rake::Task["rake:cucumber"].invoke 
-    #     end 
+    #     error = Jettywrapper.wrap(jetty_params) do
+    #       Rake::Task["rake:spec"].invoke
+    #       Rake::Task["rake:cucumber"].invoke
+    #     end
     #     raise "test failures: #{error}" if error
     #   end
     def wrap(params)
@@ -223,42 +224,42 @@ class Jettywrapper
 
       return error
     end
-    
+
     # Convenience method for configuring and starting jetty with one command
     # @param [Hash] params: The configuration to use for starting jetty
-    # @example 
+    # @example
     #    Jettywrapper.start(:jetty_home => '/path/to/jetty', :jetty_port => '8983')
     def start(params)
        Jettywrapper.configure(params)
        Jettywrapper.instance.start
        return Jettywrapper.instance
     end
-    
+
     # Convenience method for configuring and starting jetty with one command. Note
-    # that for stopping, only the :jetty_home value is required (including other values won't 
-    # hurt anything, though). 
+    # that for stopping, only the :jetty_home value is required (including other values won't
+    # hurt anything, though).
     # @param [Hash] params: The jetty_home to use for stopping jetty
     # @return [Jettywrapper.instance]
-    # @example 
+    # @example
     #    Jettywrapper.stop_with_params(:jetty_home => '/path/to/jetty')
     def stop(params)
        Jettywrapper.configure(params)
        Jettywrapper.instance.stop
        return Jettywrapper.instance
     end
-    
+
     # Determine whether the jetty at the given jetty_home is running
     # @param [Hash] params: :jetty_home is required. Which jetty do you want to check the status of?
     # @return [Boolean]
     # @example
     #    Jettywrapper.is_jetty_running?(:jetty_home => '/path/to/jetty')
-    def is_jetty_running?(params)      
+    def is_jetty_running?(params)
       Jettywrapper.configure(params)
       pid = Jettywrapper.instance.pid
       return false unless pid
       true
     end
-    
+
     # Return the pid of the specified jetty, or return nil if it isn't running
     # @param [Hash] params: :jetty_home is required.
     # @return [Fixnum] or [nil]
@@ -270,7 +271,7 @@ class Jettywrapper
       return nil unless pid
       pid
     end
-    
+
     # Check to see if the port is open so we can raise an error if we have a conflict
     # @param [Fixnum] port the port to check
     # @return [Boolean]
@@ -294,8 +295,8 @@ class Jettywrapper
 
       return false
     end
-    
-    # Check to see if the pid is actually running. This only works on unix. 
+
+    # Check to see if the pid is actually running. This only works on unix.
     def is_pid_running?(pid)
       begin
         return Process.getpgid(pid) != -1
@@ -307,7 +308,7 @@ class Jettywrapper
     def logger=(logger)
       @@logger = logger
     end
-  
+
     # If ::Rails.logger is defined and is not nil, it will be returned.
     # If no logger has been defined, a new STDOUT Logger will be created.
     def logger
@@ -315,12 +316,12 @@ class Jettywrapper
     end
 
   end #end of class << self
-    
+
   def logger
     self.class.logger
   end
-        
-  # What command is being run to invoke jetty? 
+
+  # What command is being run to invoke jetty?
   def jetty_command
     ["java", java_variables, java_opts, "-jar", "start.jar", jetty_opts].flatten
   end
@@ -330,8 +331,8 @@ class Jettywrapper
      "-Dsolr.solr.home=#{Shellwords.escape(@solr_home)}"]
   end
 
-  # Start the jetty server. Check the pid file to see if it is running already, 
-  # and stop it if so. After you start jetty, write the PID to a file. 
+  # Start the jetty server. Check the pid file to see if it is running already,
+  # and stop it if so. After you start jetty, write the PID to a file.
   # This is the instance start method. It must be called on Jettywrapper.instance
   # You're probably better off using Jettywrapper.start(:jetty_home => "/path/to/jetty")
   # @example
@@ -342,10 +343,10 @@ class Jettywrapper
     logger.debug "Starting jetty with these values: "
     logger.debug "jetty_home: #{@jetty_home}"
     logger.debug "jetty_command: #{jetty_command.join(' ')}"
-   
+
     # Check to see if we can start.
     # 1. If there is a pid, check to see if it is really running
-    # 2. Check to see if anything is blocking the port we want to use     
+    # 2. Check to see if anything is blocking the port we want to use
     if pid
       if Jettywrapper.is_pid_running?(pid)
         raise("Server is already running with PID #{pid}")
@@ -379,12 +380,12 @@ class Jettywrapper
     begin
     Timeout::timeout(startup_wait) do
       sleep 1 until (Jettywrapper.is_port_in_use? self.port)
-    end 
+    end
     rescue Timeout::Error
       logger.warn "Waited #{startup_wait} seconds for jetty to start, but it is not yet listening on port #{self.port}. Continuing anyway."
     end
   end
- 
+
   def process
     @process ||= begin
        process = ChildProcess.build(*jetty_command)
@@ -411,7 +412,7 @@ class Jettywrapper
   #    Jettywrapper.configure(params)
   #    Jettywrapper.instance.stop
   #    return Jettywrapper.instance
-  def stop    
+  def stop
     logger.debug "Instance stop method called for pid '#{pid}'"
     if pid
       if @process
@@ -426,7 +427,7 @@ class Jettywrapper
       end
     end
   end
- 
+
 
   # The fully qualified path to the pid_file
   def pid_path
@@ -438,7 +439,7 @@ class Jettywrapper
   def pid_file
     jetty_home_to_pid_file(@jetty_home)
   end
-   
+
   # Take the @jetty_home value and transform it into a legal filename
   # @return [String] the name of the pid_file
   # @example
@@ -455,7 +456,7 @@ class Jettywrapper
   def pid_dir
     File.expand_path(File.join(base_path,'tmp','pids'))
   end
-   
+
   # Check to see if there is a pid file already
   # @return true if the file exists, otherwise false
   def pid_file?
