@@ -43,7 +43,6 @@ namespace :jetty do
     Jettywrapper.start(JETTY_CONFIG)
   end
 
-
   desc "Load the jetty config"
   task :environment do
     unless defined? JETTY_CONFIG
@@ -53,8 +52,3 @@ namespace :jetty do
 
 end
 
-namespace :repo do
-
-
-
-end
