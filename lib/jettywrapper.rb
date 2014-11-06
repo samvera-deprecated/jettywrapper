@@ -19,7 +19,6 @@ class Jettywrapper
   include Singleton
   include ActiveSupport::Benchmarkable
 
-
   attr_accessor :jetty_home   # Jetty's home directory
   attr_accessor :port         # Jetty's port.  Default is 8888.  Note that attribute is named port, but params passed in expect :jetty_port
   attr_accessor :startup_wait # How many seconds to wait for jetty to spin up. Default is 5.
@@ -34,9 +33,8 @@ class Jettywrapper
     self.base_path = self.class.app_root
   end
 
-
-  # Methods inside of the class << self block can be called directly on Jettywrapper, as class methods.
-  # Methods outside the class << self block must be called on Jettywrapper.instance, as instance methods.
+  # Methods  inside the class << self block can be called directly on Jettywrapper, as class methods:      puts Jettywrapper.zip_file
+  # Methods outside the class << self block must be called on Jettywrapper.instance, as instance methods:  puts Jettywrapper.instance.java_variables
   class << self
 
     attr_writer :hydra_jetty_version, :url, :tmp_dir, :jetty_dir, :env
@@ -137,8 +135,10 @@ class Jettywrapper
       jetty_file = "#{app_root}/config/jetty.yml"
 
       unless File.exists?(jetty_file)
-        logger.warn "Didn't find expected jettywrapper config file at #{jetty_file}, using default file instead."
-        jetty_file = File.expand_path("../config/jetty.yml", File.dirname(__FILE__))
+        jetty_file2 = File.expand_path("../config/jetty.yml", File.dirname(__FILE__))
+        logger.warn "jettywrapper expected config not found at:  #{jetty_file}"
+        logger.warn "jettywrapper fallback to default config at: #{jetty_file2}"
+        jetty_file = jetty_file2
       end
 
       begin
@@ -164,24 +164,23 @@ class Jettywrapper
 
     # Set the jetty parameters. It accepts a Hash of symbols.
     # @param [Hash<Symbol>] params
-    #  :jetty_home Required. Jetty's home direcotry
-    #  :jetty_port  Jetty's port.  Default is 8888.   Note that attribute is named port, but params passed in expect :jetty_port
-    #  :startup_wait How many seconds to wait for jetty to spin up.  Default is 5. If jetty doesn't finish spinning up, tests can fail because they can't reach jetty.
-    #  :solr_home Solr's home directory. Default is jetty_home/solr
-    #  :quiet Keep True(default) to reduce jetty's output
-    #  :java_opts options to pass to the jvm (ex. ["-Xmx512mb", "-Xms128mb"])
-    #  :jetty_opts options to pass to jetty (ex. ["etc/my_jetty.xml", "etc/other.xml"] as in http://wiki.eclipse.org/Jetty/Reference/jetty.xml_usage
+    #  :jetty_home   Jetty's home directory (default: jetty)
+    #  :jetty_port   Jetty's port (default: 8888) --  Note that attribute is named port, but params passed in expect :jetty_port
+    #  :startup_wait How many seconds to wait for jetty to spin up (default: 5). If jetty doesn't finish spinning up, tests can fail because they can't reach jetty.
+    #  :solr_home    Solr's home directory. Default is jetty_home/solr
+    #  :quiet        Reduce output (default: True)
+    #  :java_opts    options passed to the JVM (ex. ["-Xmx512mb", "-Xms128mb"])
+    #  :jetty_opts   options passed to jetty (ex. ["etc/my_jetty.xml", "etc/other.xml"] as in http://wiki.eclipse.org/Jetty/Reference/jetty.xml_usage
     def configure(params = {})
       jetty_server = self.instance
       jetty_server.reset_process!
-      jetty_server.quiet = params[:quiet].nil? ? true : params[:quiet]
-
-      jetty_server.jetty_home = params[:jetty_home] || File.expand_path(File.join(app_root, 'jetty'))
-      jetty_server.solr_home = params[:solr_home]  || File.join( jetty_server.jetty_home, "solr")
-      jetty_server.port = params[:jetty_port] || 8888
+      jetty_server.quiet        = params[:quiet].nil? ? true : params[:quiet]
+      jetty_server.jetty_home   = params[:jetty_home]   || File.expand_path(File.join(app_root, 'jetty'))
+      jetty_server.solr_home    = params[:solr_home]    || File.join( jetty_server.jetty_home, "solr")
+      jetty_server.port         = params[:jetty_port]   || 8888
       jetty_server.startup_wait = params[:startup_wait] || 5
-      jetty_server.java_opts = params[:java_opts] || []
-      jetty_server.jetty_opts = params[:jetty_opts] || []
+      jetty_server.java_opts    = params[:java_opts]    || []
+      jetty_server.jetty_opts   = params[:jetty_opts]   || []
       return jetty_server
     end
 
