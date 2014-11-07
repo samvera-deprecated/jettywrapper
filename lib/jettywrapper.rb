@@ -144,17 +144,17 @@ class Jettywrapper
       begin
         jetty_erb = ERB.new(IO.read(jetty_file)).result(binding)
       rescue
-        raise("jetty.yml was found, but could not be parsed with ERB. \n#{$!.inspect}")
+        raise("#{jetty_file} was found, but could not be parsed with ERB. \n#{$!.inspect}")
       end
 
       begin
         jetty_yml = YAML::load(jetty_erb)
       rescue
-        raise("jetty.yml was found, but could not be parsed.\n")
+        raise("#{jetty_erb} was found, but could not be parsed.\n")
       end
 
       if jetty_yml.nil? || !jetty_yml.is_a?(Hash)
-        raise("jetty.yml was found, but was blank or malformed.\n")
+        raise("#{jetty_yml} was found, but was blank or malformed.\n")
       end
 
       config = jetty_yml.with_indifferent_access
