@@ -7,7 +7,8 @@ namespace :jettywrapper do
   
   jetty = {
     :jetty_home => File.expand_path("#{File.dirname(__FILE__)}/../jetty"),
-    :jetty_port => "8983", :java_opts=>["-Xmx128mb"]
+    :jetty_port => "8983",
+    :java_opts  =>["-Xmx128mb"]
   }
   
   desc "Return the status of jetty"
@@ -31,6 +32,7 @@ namespace :jettywrapper do
   desc "Restarts jetty"
   task :restart do
     Jettywrapper.stop(jetty)
+    sleep 2   # give stop a chance to finish
     Jettywrapper.start(jetty)
   end
 
@@ -41,21 +43,21 @@ namespace :jettywrapper do
     end
     
     JETTY_HOME_TEST = File.expand_path(File.dirname(__FILE__) + '/../../jetty-test')
-    JETTY_HOME_DEV = File.expand_path(File.dirname(__FILE__) + '/../../jetty-dev')
+    JETTY_HOME_DEV  = File.expand_path(File.dirname(__FILE__) + '/../../jetty-dev')
     
     JETTY_PARAMS_TEST = {
       :quiet => ENV['HYDRA_CONSOLE'] ? false : true,
-      :jetty_home => JETTY_HOME_TEST,
-      :jetty_port => 8983,
-      :solr_home => File.expand_path(JETTY_HOME_TEST + '/solr'),
+      :jetty_home  => JETTY_HOME_TEST,
+      :jetty_port  => 8983,
+      :solr_home   => File.expand_path(JETTY_HOME_TEST + '/solr'),
       :fedora_home => File.expand_path(JETTY_HOME_TEST + '/fedora/default')
     }
 
     JETTY_PARAMS_DEV = {
       :quiet => ENV['HYDRA_CONSOLE'] ? false : true,
-      :jetty_home => JETTY_HOME_DEV,
-      :jetty_port => 8984,
-      :solr_home => File.expand_path(JETTY_HOME_DEV + '/solr'),
+      :jetty_home  => JETTY_HOME_DEV,
+      :jetty_port  => 8984,
+      :solr_home   => File.expand_path(JETTY_HOME_DEV + '/solr'),
       :fedora_home => File.expand_path(JETTY_HOME_DEV + '/fedora/default')
     }
     
@@ -67,7 +69,7 @@ namespace :jettywrapper do
   task :config_solr => [:init] do
     FileList['solr/conf/*'].each do |f|  
       cp("#{f}", JETTY_PARAMS_TEST[:solr_home] + '/conf/', :verbose => true)
-      cp("#{f}", JETTY_PARAMS_DEV[:solr_home] + '/conf/', :verbose => true)
+      cp("#{f}", JETTY_PARAMS_DEV[:solr_home]  + '/conf/', :verbose => true)
     end
   end
   
@@ -77,7 +79,7 @@ namespace :jettywrapper do
     if File.exists?(fcfg)
       puts "copying over fedora.fcfg"
       cp("#{fcfg}", JETTY_PARAMS_TEST[:fedora_home] + '/server/config/', :verbose => true)
-      cp("#{fcfg}", JETTY_PARAMS_DEV[:fedora_home] + '/server/config/', :verbose => true)
+      cp("#{fcfg}", JETTY_PARAMS_DEV[:fedora_home]  + '/server/config/', :verbose => true)
     else
       puts "#{fcfg} file not found -- skipping fedora config"
     end

@@ -40,6 +40,7 @@ namespace :jetty do
   desc "Restarts jetty"
   task :restart => :environment do
     Jettywrapper.stop(JETTY_CONFIG)
+    sleep 2  # give stop a chance to finish
     Jettywrapper.start(JETTY_CONFIG)
   end
 
