@@ -19,3 +19,5 @@ unless ENV.select { |k,v| k =~ /TEST_JETTY_PORT/ }.empty?
 else
   TEST_JETTY_PORTS = [8983, 8984,9999,8888]
 end
+
+Jettywrapper.logger.level=3
