@@ -63,7 +63,7 @@ class Jettywrapper
     def download(url = nil)
       self.url = url if url
       logger.info "Downloading jetty at #{self.url} ..."
-      FileUtils.mkdir tmp_dir unless File.exists? tmp_dir
+      FileUtils.mkdir(tmp_dir, :verbose => (not self.quiet)) unless File.exists? tmp_dir
       system "curl -L #{self.url} -o #{zip_file}"
       abort "Unable to download jetty from #{self.url}" unless $?.success?
     end
@@ -149,12 +149,12 @@ class Jettywrapper
 
       begin
         jetty_yml = YAML::load(jetty_erb)
-      rescue
-        raise("#{jetty_erb} was found, but could not be parsed.\n")
+      rescue SyntaxError => e   # not caught by rescue [StandardError]
+        raise("#{jetty_file} was found, but could not be parsed as YAML.\n")
       end
 
       if jetty_yml.nil? || !jetty_yml.is_a?(Hash)
-        raise("#{jetty_yml} was found, but was blank or malformed.\n")
+        raise("#{jetty_file} was found, but was blank or malformed.\n")
       end
 
       config = jetty_yml.with_indifferent_access
