@@ -1,5 +1,6 @@
 require 'spec_helper'
 require 'rubygems'
+require 'fileutils'
 
   describe Jettywrapper do
     
@@ -25,6 +26,7 @@ require 'rubygems'
     context "downloading" do
       context "with default file" do
         it "should download the zip file" do
+          FileUtils.rm "tmp/v7.0.0.zip", force: true
           Jettywrapper.should_receive(:system).with('curl -L https://github.com/projecthydra/hydra-jetty/archive/v7.0.0.zip -o tmp/v7.0.0.zip').and_return(system ('true'))
           Jettywrapper.download
         end

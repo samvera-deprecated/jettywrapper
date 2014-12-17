@@ -63,6 +63,7 @@ class Jettywrapper
     end
 
     def download(url = nil)
+      return if File.exists? zip_file
       self.url = url if url
       logger.info "Downloading jetty at #{self.url} ..."
       FileUtils.mkdir tmp_dir unless File.exists? tmp_dir
@@ -230,9 +231,10 @@ class Jettywrapper
     # @example
     #    Jettywrapper.start(:jetty_home => '/path/to/jetty', :jetty_port => '8983')
     def start(params)
-       Jettywrapper.configure(params)
-       Jettywrapper.instance.start
-       return Jettywrapper.instance
+      unzip unless File.exists? jetty_dir
+      Jettywrapper.configure(params)
+      Jettywrapper.instance.start
+      return Jettywrapper.instance
     end
 
     # Convenience method for configuring and starting jetty with one command. Note
