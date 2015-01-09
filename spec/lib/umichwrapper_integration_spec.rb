@@ -5,11 +5,11 @@ require 'net/http'
 require 'socket'
 
 module Hydra
-  describe Jettywrapper do    
+  describe UMichwrapper do    
     context "integration" do
       before(:all) do
         $stderr.reopen("/dev/null", "w")
-        Jettywrapper.logger.level=3
+        UMichwrapper.logger.level=3
       end
       
       it "starts" do
@@ -19,8 +19,8 @@ module Hydra
           :java_opts => ["-Xmx256m", '-XX:MaxPermSize=256m'],
           :jetty_port => TEST_JETTY_PORTS.first
         }
-        Jettywrapper.configure(jetty_params) 
-        ts = Jettywrapper.instance
+        UMichwrapper.configure(jetty_params) 
+        ts = UMichwrapper.instance
         ts.logger.debug "Stopping jetty from rspec."
         ts.stop
         ts.start      
@@ -43,8 +43,8 @@ module Hydra
           :java_opts => ["-Xmx256m", '-XX:MaxPermSize=256m'],
           :jetty_port => TEST_JETTY_PORTS.first
         }
-        Jettywrapper.configure(jetty_params) 
-        ts = Jettywrapper.instance
+        UMichwrapper.configure(jetty_params) 
+        ts = UMichwrapper.instance
         ts.logger.debug "Stopping jetty from rspec."
         ts.stop
         ts.start
@@ -64,11 +64,11 @@ module Hydra
             @s.close
           end
           it "can check to see whether a port is already in use" do
-            Jettywrapper.is_port_in_use?(TEST_JETTY_PORTS.last).should eql(true)
+            UMichwrapper.is_port_in_use?(TEST_JETTY_PORTS.last).should eql(true)
           end
         end
         it "should be false when nothing is running" do
-          Jettywrapper.is_port_in_use?(TEST_JETTY_PORTS.last).should eql(false)
+          UMichwrapper.is_port_in_use?(TEST_JETTY_PORTS.last).should eql(false)
         end
       end
       
@@ -78,7 +78,7 @@ module Hydra
           :jetty_port => TEST_JETTY_PORTS.first,
           :startup_wait => 30
         }
-        ts = Jettywrapper.configure(jetty_params) 
+        ts = UMichwrapper.configure(jetty_params) 
         ts.stop
         ts.pid_file?.should eql(false)
         ts.start
@@ -94,7 +94,7 @@ module Hydra
         }
 	      socket = TCPServer.new(TEST_JETTY_PORTS.first)
         begin
-          ts = Jettywrapper.configure(jetty_params) 
+          ts = UMichwrapper.configure(jetty_params) 
           ts.stop
           ts.pid_file?.should eql(false)
           lambda{ ts.start }.should raise_exception
