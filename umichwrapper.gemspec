@@ -5,7 +5,7 @@ require 'bundler'
 
 Gem::Specification.new do |s|
   s.name        = "umichwrapper"
-  s.version     = Jettywrapper::VERSION
+  s.version     = UMichwrapper::VERSION
   s.platform    = Gem::Platform::RUBY
   s.authors     = ["Chris Beer", "Justin Coyne", "Bess Sadler", "Colin Gross"]
   s.email       = ["grosscol@umich.edu"]

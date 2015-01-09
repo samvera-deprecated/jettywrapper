@@ -9,7 +9,7 @@ if ENV['COVERAGE'] and RUBY_VERSION =~ /^1.9/
 end
 
 require 'rspec/its'
-require 'jettywrapper'
+require 'umichwrapper'
 
 RSpec.configure do |config|
 end

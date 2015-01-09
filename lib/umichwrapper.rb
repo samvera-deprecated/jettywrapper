@@ -13,8 +13,8 @@ require 'logger'
 Dir[File.expand_path(File.join(File.dirname(__FILE__),"tasks/*.rake"))].each { |ext| load ext } if defined?(Rake)
 
 
-# Jettywrapper is a Singleton class, so you can only create one jetty instance at a time.
-class Jettywrapper
+# UMichwrapper is a Singleton class, so you can only create one jetty instance at a time.
+class UMichwrapper
 
   include Singleton
   include ActiveSupport::Benchmarkable
@@ -35,8 +35,8 @@ class Jettywrapper
   end
 
 
-  # Methods inside of the class << self block can be called directly on Jettywrapper, as class methods.
-  # Methods outside the class << self block must be called on Jettywrapper.instance, as instance methods.
+  # Methods inside of the class << self block can be called directly on UMichwrapper, as class methods.
+  # Methods outside the class << self block must be called on UMichwrapper.instance, as instance methods.
   class << self
 
     attr_writer :hydra_jetty_version, :url, :tmp_dir, :jetty_dir, :env
@@ -200,7 +200,7 @@ class Jettywrapper
     #       :startup_wait => 30,
     #       :jetty_opts => "/etc/jetty.xml"
     #     }
-    #     error = Jettywrapper.wrap(jetty_params) do
+    #     error = UMichwrapper.wrap(jetty_params) do
     #       Rake::Task["rake:spec"].invoke
     #       Rake::Task["rake:cucumber"].invoke
     #     end
@@ -229,35 +229,35 @@ class Jettywrapper
     # Convenience method for configuring and starting jetty with one command
     # @param [Hash] params: The configuration to use for starting jetty
     # @example
-    #    Jettywrapper.start(:jetty_home => '/path/to/jetty', :jetty_port => '8983')
+    #    UMichwrapper.start(:jetty_home => '/path/to/jetty', :jetty_port => '8983')
     def start(params)
       unzip unless File.exists? jetty_dir
-      Jettywrapper.configure(params)
-      Jettywrapper.instance.start
-      return Jettywrapper.instance
+      UMichwrapper.configure(params)
+      UMichwrapper.instance.start
+      return UMichwrapper.instance
     end
 
     # Convenience method for configuring and starting jetty with one command. Note
     # that for stopping, only the :jetty_home value is required (including other values won't
     # hurt anything, though).
     # @param [Hash] params: The jetty_home to use for stopping jetty
-    # @return [Jettywrapper.instance]
+    # @return [UMichwrapper.instance]
     # @example
-    #    Jettywrapper.stop_with_params(:jetty_home => '/path/to/jetty')
+    #    UMichwrapper.stop_with_params(:jetty_home => '/path/to/jetty')
     def stop(params)
-       Jettywrapper.configure(params)
-       Jettywrapper.instance.stop
-       return Jettywrapper.instance
+       UMichwrapper.configure(params)
+       UMichwrapper.instance.stop
+       return UMichwrapper.instance
     end
 
     # Determine whether the jetty at the given jetty_home is running
     # @param [Hash] params: :jetty_home is required. Which jetty do you want to check the status of?
     # @return [Boolean]
     # @example
-    #    Jettywrapper.is_jetty_running?(:jetty_home => '/path/to/jetty')
+    #    UMichwrapper.is_jetty_running?(:jetty_home => '/path/to/jetty')
     def is_jetty_running?(params)
-      Jettywrapper.configure(params)
-      pid = Jettywrapper.instance.pid
+      UMichwrapper.configure(params)
+      pid = UMichwrapper.instance.pid
       return false unless pid
       true
     end
@@ -266,10 +266,10 @@ class Jettywrapper
     # @param [Hash] params: :jetty_home is required.
     # @return [Fixnum] or [nil]
     # @example
-    #    Jettywrapper.pid(:jetty_home => '/path/to/jetty')
+    #    UMichwrapper.pid(:jetty_home => '/path/to/jetty')
     def pid(params)
-      Jettywrapper.configure(params)
-      pid = Jettywrapper.instance.pid
+      UMichwrapper.configure(params)
+      pid = UMichwrapper.instance.pid
       return nil unless pid
       pid
     end
@@ -278,7 +278,7 @@ class Jettywrapper
     # @param [Fixnum] port the port to check
     # @return [Boolean]
     # @example
-    #  Jettywrapper.is_port_open?(8983)
+    #  UMichwrapper.is_port_open?(8983)
     def is_port_in_use?(port)
       begin
         Timeout::timeout(1) do
@@ -335,12 +335,12 @@ class Jettywrapper
 
   # Start the jetty server. Check the pid file to see if it is running already,
   # and stop it if so. After you start jetty, write the PID to a file.
-  # This is the instance start method. It must be called on Jettywrapper.instance
-  # You're probably better off using Jettywrapper.start(:jetty_home => "/path/to/jetty")
+  # This is the instance start method. It must be called on UMichwrapper.instance
+  # You're probably better off using UMichwrapper.start(:jetty_home => "/path/to/jetty")
   # @example
-  #    Jettywrapper.configure(params)
-  #    Jettywrapper.instance.start
-  #    return Jettywrapper.instance
+  #    UMichwrapper.configure(params)
+  #    UMichwrapper.instance.start
+  #    return UMichwrapper.instance
   def start
     logger.debug "Starting jetty with these values: "
     logger.debug "jetty_home: #{@jetty_home}"
@@ -350,14 +350,14 @@ class Jettywrapper
     # 1. If there is a pid, check to see if it is really running
     # 2. Check to see if anything is blocking the port we want to use
     if pid
-      if Jettywrapper.is_pid_running?(pid)
+      if UMichwrapper.is_pid_running?(pid)
         raise("Server is already running with PID #{pid}")
       else
         logger.warn "Removing stale PID file at #{pid_path}"
         File.delete(pid_path)
       end
     end
-    if Jettywrapper.is_port_in_use?(self.port)
+    if UMichwrapper.is_port_in_use?(self.port)
       raise("Port #{self.port} is already in use.")
     end
     benchmark "Started jetty" do
@@ -381,7 +381,7 @@ class Jettywrapper
   def startup_wait!
     begin
     Timeout::timeout(startup_wait) do
-      sleep 1 until (Jettywrapper.is_port_in_use? self.port)
+      sleep 1 until (UMichwrapper.is_port_in_use? self.port)
     end
     rescue Timeout::Error
       logger.warn "Waited #{startup_wait} seconds for jetty to start, but it is not yet listening on port #{self.port}. Continuing anyway."
@@ -408,12 +408,12 @@ class Jettywrapper
     @process = nil
   end
 
-  # Instance stop method. Must be called on Jettywrapper.instance
-  # You're probably better off using Jettywrapper.stop(:jetty_home => "/path/to/jetty")
+  # Instance stop method. Must be called on UMichwrapper.instance
+  # You're probably better off using UMichwrapper.stop(:jetty_home => "/path/to/jetty")
   # @example
-  #    Jettywrapper.configure(params)
-  #    Jettywrapper.instance.stop
-  #    return Jettywrapper.instance
+  #    UMichwrapper.configure(params)
+  #    UMichwrapper.instance.stop
+  #    return UMichwrapper.instance
   def stop
     logger.debug "Instance stop method called for pid '#{pid}'"
     if pid
