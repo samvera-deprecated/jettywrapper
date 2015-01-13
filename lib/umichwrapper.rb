@@ -19,14 +19,17 @@ class UMichwrapper
   include Singleton
   include ActiveSupport::Benchmarkable
 
-  attr_accessor :jetty_home   # Jetty's home directory
-  attr_accessor :port         # Jetty's port.  Default is 8888.  Note that attribute is named port, but params passed in expect :jetty_port
   attr_accessor :startup_wait # How many seconds to wait for jetty to spin up. Default is 5.
-  attr_accessor :quiet        # true (default) to reduce Jetty's output
-  attr_accessor :solr_home    # Solr's home directory. Default is jetty_home/solr
-  attr_accessor :base_path    # The root of the application. Used for determining where log files and PID files should go.
-  attr_accessor :java_opts    # Options to pass to java (ex. ["-Xmx512mb", "-Xms128mb"])
-  attr_accessor :jetty_opts   # Options to pass to jetty (ex. ["etc/my_jetty.xml", "etc/other.xml"] as in http://wiki.eclipse.org/Jetty/Reference/jetty.xml_usage
+  attr_accessor :solr_home
+  attr_accessor :solr_host
+  attr_accessor :solr_port
+  attr_accessor :fedora_host
+  attr_accessor :fedora_port
+  attr_accessor :torq_home
+  attr_accessor :solr_url
+  attr_accessor :fedora_url
+  attr_accessor :app_name
+  attr_accessor :deploy_dir
 
   # configure the singleton with some defaults
   def initialize(params = {})
@@ -141,6 +144,9 @@ class UMichwrapper
       tupac.fedora_url = params[:fedora_url] || "#{tupac.fedora_host}:#{tupac.fedora_port}/fcrepo/#{ENV['USER']}/dev" 
 
       tupac.startup_wait = params[:startup_wait] || 5
+
+      tupac.app_name = params[:app_name] || File.basename(self.base_path)
+      tupac.deploy_dir = params[:deploy_dir] || File.join( self.torq_home, "deployments" )
 
       return tupac
     end
@@ -350,6 +356,7 @@ class UMichwrapper
     logger.debug "Stop and undeploy called for app_name"
     if UMichwrapper.is_deployed?
       # Undeploy by removing -knob.yml.deployed file
+      puts "Undeploying app_name"
     else
       puts "app_name is not deployed on torquebox_deployments"
     end
