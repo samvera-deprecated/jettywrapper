@@ -340,26 +340,6 @@ class UMichwrapper
     end
   end
 
-  def process
-    @process ||= begin
-       process = ChildProcess.build(*jetty_command)
-       if self.quiet
-         process.io.stderr = File.open(File.expand_path("jettywrapper.log"), "w+")
-         process.io.stdout = process.io.stderr
-         logger.warn "Logging jettywrapper stdout to #{File.expand_path(process.io.stderr.path)}"
-       else
-         process.io.inherit!
-       end
-       process.detach = true
-
-       process
-     end
-  end
-
-  def reset_process!
-    @process = nil
-  end
-
   # Instance stop method. Must be called on UMichwrapper.instance
   # You're probably better off using UMichwrapper.stop(:jetty_home => "/path/to/jetty")
   # @example
@@ -367,58 +347,13 @@ class UMichwrapper
   #    UMichwrapper.instance.stop
   #    return UMichwrapper.instance
   def stop
-    logger.debug "Instance stop method called for pid '#{pid}'"
-    if pid
-      if @process
-        @process.stop
-      else
-        Process.kill("KILL", pid) rescue nil
-      end
-
-      begin
-        File.delete(pid_path)
-      rescue
-      end
+    logger.debug "Stop and undeploy called for app_name"
+    if UMichwrapper.is_deployed?
+      # Undeploy by removing -knob.yml.deployed file
+    else
+      puts "app_name is not deployed on torquebox_deployments"
     end
   end
 
 
-  # The fully qualified path to the pid_file
-  def pid_path
-    #need to memoize this, becasuse the base path could be relative and the cwd can change in the yield block of wrap
-    @path ||= File.join(pid_dir, pid_file)
-  end
-
-  # The file where the process ID will be written
-  def pid_file
-    jetty_home_to_pid_file(@jetty_home)
-  end
-
-  # Take the @jetty_home value and transform it into a legal filename
-  # @return [String] the name of the pid_file
-  # @example
-  #    /usr/local/jetty1 => _usr_local_jetty1.pid
-  def jetty_home_to_pid_file(jetty_home)
-    begin
-      jetty_home.gsub(/\//,'_') << "_#{self.class.env}" << ".pid"
-    rescue Exception => e
-      raise "Couldn't make a pid file for jetty_home value #{jetty_home}\n  Caused by: #{e}"
-    end
-  end
-
-  # The directory where the pid_file will be written
-  def pid_dir
-    File.expand_path(File.join(base_path,'tmp','pids'))
-  end
-
-  # Check to see if there is a pid file already
-  # @return true if the file exists, otherwise false
-  def pid_file?
-    File.exist?(pid_path)
-  end
-
-  # the process id of the currently running jetty instance
-  def pid
-    File.open( pid_path ) { |f| return f.gets.to_i } if File.exist?(pid_path)
-  end
 end
