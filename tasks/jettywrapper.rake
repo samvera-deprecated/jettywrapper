@@ -15,26 +15,26 @@ namespace :umichwrapper do
   
   desc "Return the status of this application on torquebox."
   task :status do
-    status = umichwrapper.is_jetty_running?(umich_config) ? "Running." : "Not running."
+    status = UMichwrapper.is_jetty_running?(umich_config) ? "Running." : "Not running."
     puts status
   end
   
   desc "Start application deployment on torquebox."
   task :start do
-    umichwrapper.start(jetty)
-    puts "jetty started at PID #{umichwrapper.pid(jetty)}"
+    UMichwrapper.start(jetty)
+    puts "jetty started at PID #{UMichwrapper.pid(jetty)}"
   end
   
   desc "Stop application deployment on torquebox."
   task :stop do
-    umichwrapper.stop(jetty)
+    UMichwrapper.stop(jetty)
     puts "application stopped and undeployed."
   end
   
   desc "Restart application on torquebox."
   task :restart do
-    umichwrapper.stop(jetty)
-    umichwrapper.start(jetty)
+    UMichwrapper.stop(jetty)
+    UMichwrapper.start(jetty)
   end
 
   desc "Init Hydra configuration" 
