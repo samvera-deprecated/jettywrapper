@@ -45,59 +45,6 @@ class UMichwrapper
       @hydra_jetty_version ||= 'v7.0.0'
     end
 
-    def url
-      @url ||= defined?(ZIP_URL) ? ZIP_URL : "https://github.com/projecthydra/hydra-jetty/archive/#{hydra_jetty_version}.zip"
-      @url
-    end
-
-    def tmp_dir
-      @tmp_dir ||= 'tmp'
-    end
-
-    def zip_file
-      ENV['JETTY_ZIP'] || File.join(tmp_dir, url.split('/').last)
-    end
-
-    def jetty_dir
-      @jetty_dir ||= 'jetty'
-    end
-
-    def download(url = nil)
-      return if File.exists? zip_file
-      self.url = url if url
-      logger.info "Downloading jetty at #{self.url} ..."
-      FileUtils.mkdir tmp_dir unless File.exists? tmp_dir
-      system "curl -L #{self.url} -o #{zip_file}"
-      abort "Unable to download jetty from #{self.url}" unless $?.success?
-    end
-
-    def unzip
-      download unless File.exists? zip_file
-      logger.info "Unpacking #{zip_file}..."
-      tmp_save_dir = File.join tmp_dir, 'jetty_generator'
-      system "unzip -d #{tmp_save_dir} -qo #{zip_file}"
-      abort "Unable to unzip #{zip_file} into tmp_save_dir/" unless $?.success?
-
-      # Remove the old jetty directory if it exists
-      system "rm -r #{jetty_dir}" if File.directory?(jetty_dir)
-
-      # Move the expanded zip file into the final destination.
-      expanded_dir = expanded_zip_dir(tmp_save_dir)
-      system "mv #{expanded_dir} #{jetty_dir}"
-      abort "Unable to move #{expanded_dir} into #{jetty_dir}/" unless $?.success?
-    end
-
-    def expanded_zip_dir(tmp_save_dir)
-      # This old way is more specific, but won't work for blacklight-jetty
-      #expanded_dir = Dir[File.join(tmp_save_dir, "hydra-jetty-*")].first
-      Dir[File.join(tmp_save_dir, "*")].first
-    end
-
-    def clean
-      system "rm -rf #{jetty_dir}"
-      unzip
-    end
-
     def reset_config
       @app_root = nil
       @env = nil
