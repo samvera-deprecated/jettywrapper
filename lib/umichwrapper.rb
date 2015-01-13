@@ -190,7 +190,6 @@ class UMichwrapper
     # @example
     #    UMichwrapper.start(:jetty_home => '/path/to/jetty', :jetty_port => '8983')
     def start(params)
-      unzip unless File.exists? jetty_dir
       UMichwrapper.configure(params)
       UMichwrapper.instance.start
       return UMichwrapper.instance
@@ -257,6 +256,22 @@ class UMichwrapper
       return false
     end
 
+    # Check to see if the application is deployed.
+    def is_deplyed?
+      app_name = File.basename(UMichwrapper.base_path)
+      deploy_dir = File.join( UMichwrapper.torq_home, "deployments" )
+
+      if !File.exists? deploy_dir
+        raise("Torquebox deployment dir does not exist: #{deploy_dir}")
+      end
+
+      if File.exist? File.join(deploy_dir, "#{app_name}-knob.yml.deployed"
+        true
+      end
+
+      false
+    end
+
     # Check to see if the pid is actually running. This only works on unix.
     def is_pid_running?(pid)
       begin
@@ -282,68 +297,46 @@ class UMichwrapper
     self.class.logger
   end
 
-  # What command is being run to invoke jetty?
-  def jetty_command
-    ["java", java_variables, java_opts, "-jar", "start.jar", jetty_opts].flatten
-  end
-
-  def java_variables
-    ["-Djetty.port=#{@port}",
-     "-Dsolr.solr.home=#{Shellwords.escape(@solr_home)}"]
-  end
-
   # Start the jetty server. Check the pid file to see if it is running already,
   # and stop it if so. After you start jetty, write the PID to a file.
   # This is the instance start method. It must be called on UMichwrapper.instance
-  # You're probably better off using UMichwrapper.start(:jetty_home => "/path/to/jetty")
+  # You're probably better off using UMichwrapper.start()
   # @example
   #    UMichwrapper.configure(params)
   #    UMichwrapper.instance.start
   #    return UMichwrapper.instance
   def start
-    logger.debug "Starting jetty with these values: "
-    logger.debug "jetty_home: #{@jetty_home}"
-    logger.debug "jetty_command: #{jetty_command.join(' ')}"
+    app_name = File.basename(self.base_path)
+    deploy_dir = File.join( self.torq_home, "deployments" )
+
+    logger.debug "Deploying application using the following parameters: "
+    logger.debug "app_name: #{app_name}"
+    logger.debug "deploy_dir: #{deploy_dir}"
 
     # Check to see if we can start.
-    # 1. If there is a pid, check to see if it is really running
-    # 2. Check to see if anything is blocking the port we want to use
-    if pid
-      if UMichwrapper.is_pid_running?(pid)
-        raise("Server is already running with PID #{pid}")
-      else
-        logger.warn "Removing stale PID file at #{pid_path}"
-        File.delete(pid_path)
-      end
+    # 0. Torquebox deployments exists and is writable.
+    # 1. If a .deployed file exists, app is already deployed.
+    if UMichwrapper.is_deployed?
+      puts "Application already deployed."
+      return
     end
-    if UMichwrapper.is_port_in_use?(self.port)
-      raise("Port #{self.port} is already in use.")
-    end
-    benchmark "Started jetty" do
-      Dir.chdir(@jetty_home) do
-        process.start
-      end
-      FileUtils.makedirs(pid_dir) unless File.directory?(pid_dir)
-      begin
-        f = File.new(pid_path,  "w")
-      rescue Errno::ENOENT, Errno::EACCES
-        f = File.new(File.join(base_path,'tmp',pid_file),"w")
-      end
-      f.puts "#{process.pid}"
-      f.close
-      logger.debug "Wrote pid file to #{pid_path} with value #{process.pid}"
-      startup_wait!
-    end
+
+    # If -knob.yml.failed is present, previous deployment failed.
+
+    # Write -knob.yml if not present and touch -know.yml.dodeploy
+    
+    # Wait until -knob.yml.deployed or -knob.yml.failed appears
+    startup_wait!
   end
 
   # Wait for the jetty server to start and begin listening for requests
   def startup_wait!
     begin
     Timeout::timeout(startup_wait) do
-      sleep 1 until (UMichwrapper.is_port_in_use? self.port)
+      sleep 1 until (UMichwrapper.is_deployed?)
     end
     rescue Timeout::Error
-      logger.warn "Waited #{startup_wait} seconds for jetty to start, but it is not yet listening on port #{self.port}. Continuing anyway."
+      logger.warn "Waited #{startup_wait} seconds for torquebox to deploy, but it is not yet. Continuing anyway."
     end
   end
 
