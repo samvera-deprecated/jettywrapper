@@ -19,7 +19,6 @@ class UMichwrapper
   include Singleton
   include ActiveSupport::Benchmarkable
 
-
   attr_accessor :jetty_home   # Jetty's home directory
   attr_accessor :port         # Jetty's port.  Default is 8888.  Note that attribute is named port, but params passed in expect :jetty_port
   attr_accessor :startup_wait # How many seconds to wait for jetty to spin up. Default is 5.
@@ -33,7 +32,6 @@ class UMichwrapper
   def initialize(params = {})
     self.base_path = self.class.app_root
   end
-
 
   # Methods inside of the class << self block can be called directly on UMichwrapper, as class methods.
   # Methods outside the class << self block must be called on UMichwrapper.instance, as instance methods.
@@ -110,27 +108,41 @@ class UMichwrapper
     end
 
 
-    # Set the jetty parameters. It accepts a Hash of symbols.
+    # Set the parameters for the instance.
+    # @note tupac represents the one and only wrapper instance.
+    #
+    # @return instance
+    #
     # @param [Hash<Symbol>] params
-    #  :jetty_home Required. Jetty's home direcotry
-    #  :jetty_port  Jetty's port.  Default is 8888.   Note that attribute is named port, but params passed in expect :jetty_port
-    #  :startup_wait How many seconds to wait for jetty to spin up.  Default is 5. If jetty doesn't finish spinning up, tests can fail because they can't reach jetty.
-    #  :solr_home Solr's home directory. Default is jetty_home/solr
-    #  :quiet Keep True(default) to reduce jetty's output
-    #  :java_opts options to pass to the jvm (ex. ["-Xmx512mb", "-Xms128mb"])
-    #  :jetty_opts options to pass to jetty (ex. ["etc/my_jetty.xml", "etc/other.xml"] as in http://wiki.eclipse.org/Jetty/Reference/jetty.xml_usage
+    #   :torq_home is the root directory of torquebox.
+    #
+    #   :solr_home is the root directory of the user's solr collection.
+    #   :solr_host is the name of the server on which solr is running.
+    #   :solr_port is the port number on which solr is listening.
+    #
+    #   :fedora_host
+    #   :fedora_port
+    #
+    #   :fedora_url the user specific url against which requests will resolve
+    #   :solr_url   the user specific url against which requests will resolve
+    #
+    #   :startup_wait How many seconds to wait before starting tests. Deployment may take a while.
     def configure(params = {})
-      jetty_server = self.instance
-      jetty_server.reset_process!
-      jetty_server.quiet = params[:quiet].nil? ? true : params[:quiet]
+      tupac = self.instance
 
-      jetty_server.jetty_home = params[:jetty_home] || File.expand_path(File.join(app_root, 'jetty'))
-      jetty_server.solr_home = params[:solr_home]  || File.join( jetty_server.jetty_home, "solr")
-      jetty_server.port = params[:jetty_port] || 8888
-      jetty_server.startup_wait = params[:startup_wait] || 5
-      jetty_server.java_opts = params[:java_opts] || []
-      jetty_server.jetty_opts = params[:jetty_opts] || []
-      return jetty_server
+      tupac.solr_home = params[:solr_home] || "/l/local/solr/#{ENV['USER']}"
+      tupac.solr_host = params[:solr_host] || "localhost"
+      tupac.solr_port = params[:solr_port] || 8080
+      tupac.fedora_host = params[:fedora_host] || "localhost"
+      tupac.fedora_port = params[:fedora_port] || 8080
+      tupac.torq_home = params[:torq_home] || "/l/local/torquebox"
+      
+      tupac.solr_url   = params[:solr_url]   || "#{tupac.solr_host}:#{tupac.solr_port}/solr/#{ENV['USER']}" 
+      tupac.fedora_url = params[:fedora_url] || "#{tupac.fedora_host}:#{tupac.fedora_port}/fcrepo/#{ENV['USER']}/dev" 
+
+      tupac.startup_wait = params[:startup_wait] || 5
+
+      return tupac
     end
 
 
