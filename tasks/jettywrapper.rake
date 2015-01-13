@@ -1,37 +1,40 @@
 # Note: These rake tasks are here mainly as examples to follow. You're going to want
 # to write your own rake tasks that use the locations of your jetty instances. 
 
-require 'jettywrapper'
+require 'umichwrapper'
 
-namespace :jettywrapper do
+namespace :umichwrapper do
   
-  jetty = {
-    :jetty_home => File.expand_path("#{File.dirname(__FILE__)}/../jetty"),
-    :jetty_port => "8983", :java_opts=>["-Xmx128mb"]
+  umich_config = {
+    :solr_home => "/path/to/solr"
+    :torquebox_home => "/path/to/torquebox"
+    :umich_port => "8983"
+    :solr_url => "host:port/solr/uniquename"
+    :fedora_url => "host:port/fcrepo/uniquename/dev"
   }
   
-  desc "Return the status of jetty"
+  desc "Return the status of this application on torquebox."
   task :status do
-    status = Jettywrapper.is_jetty_running?(jetty) ? "Running: #{Jettywrapper.pid(jetty)}" : "Not running"
+    status = umichwrapper.is_jetty_running?(umich_config) ? "Running." : "Not running."
     puts status
   end
   
-  desc "Start jetty"
+  desc "Start application deployment on torquebox."
   task :start do
-    Jettywrapper.start(jetty)
-    puts "jetty started at PID #{Jettywrapper.pid(jetty)}"
+    umichwrapper.start(jetty)
+    puts "jetty started at PID #{umichwrapper.pid(jetty)}"
   end
   
-  desc "stop jetty"
+  desc "Stop application deployment on torquebox."
   task :stop do
-    Jettywrapper.stop(jetty)
-    puts "jetty stopped"
+    umichwrapper.stop(jetty)
+    puts "application stopped and undeployed."
   end
   
-  desc "Restarts jetty"
+  desc "Restart application on torquebox."
   task :restart do
-    Jettywrapper.stop(jetty)
-    Jettywrapper.start(jetty)
+    umichwrapper.stop(jetty)
+    umichwrapper.start(jetty)
   end
 
   desc "Init Hydra configuration" 
