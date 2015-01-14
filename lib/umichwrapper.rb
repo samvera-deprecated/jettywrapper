@@ -271,11 +271,11 @@ class UMichwrapper
         raise("Torquebox deployment dir does not exist: #{deploy_dir}")
       end
 
-      if File.exist? File.join(deploy_dir, "#{app_name}-knob.yml.deployed"
-        true
+      if File.exist? File.join(deploy_dir, "#{app_name}-knob.yml.deployed")
+        return true
       end
 
-      false
+      return false
     end
 
     # Check to see if the pid is actually running. This only works on unix.
