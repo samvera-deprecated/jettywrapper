@@ -6,10 +6,10 @@ require 'umichwrapper'
 namespace :umichwrapper do
   
   umich_config = {
-    :solr_home => "/path/to/solr"
-    :torquebox_home => "/path/to/torquebox"
-    :umich_port => "8983"
-    :solr_url => "host:port/solr/uniquename"
+    :solr_home => "/path/to/solr",
+    :torquebox_home => "/path/to/torquebox",
+    :umich_port => "8983",
+    :solr_url => "host:port/solr/uniquename",
     :fedora_url => "host:port/fcrepo/uniquename/dev"
   }
   
