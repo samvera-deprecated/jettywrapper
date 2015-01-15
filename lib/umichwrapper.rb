@@ -151,6 +151,20 @@ class UMichwrapper
       return tupac
     end
 
+    def print_config(params = {})
+      tupac = configure( params )
+      puts "#{tupac.solr_home}"
+      puts "#{tupac.solr_host}"
+      puts "#{tupac.solr_port}"
+      puts "#{tupac.fedora_host}"
+      puts "#{tupac.fedora_port}"
+      puts "#{tupac.torq_home}"
+      puts "#{tupac.solr_url  }"
+      puts "#{tupac.fedora_url}"
+      puts "#{tupac.startup_wait}"
+      puts "#{tupac.app_name}"
+      puts "#{tupac.deploy_dir}"
+    end
 
     # Wrap the tests. Startup jetty, yield to the test task, capture any errors, shutdown
     # jetty, and return the error.
@@ -295,6 +309,39 @@ class UMichwrapper
     # If no logger has been defined, a new STDOUT Logger will be created.
     def logger
       @@logger ||= defined?(::Rails) && Rails.logger ? ::Rails.logger : ::Logger.new(STDOUT)
+    end
+
+    def basic_deployment_descriptor(options = {})
+      env = options[:env] || options['env']
+      env ||= defined?(RACK_ENV) ? RACK_ENV : ENV['RACK_ENV']
+      env ||= defined?(::Rails) && Rails.respond_to?(:env) ? ::Rails.env : ENV['RAILS_ENV']
+
+      root = options[:root] || options['root'] || Dir.pwd
+      context_path = options[:context_path] || options['context_path']
+
+      d = {}
+      d['application'] = {}
+      d['application']['root'] = root
+      d['environment'] = {}
+      d['environment']['RACK_ENV'] = env.to_s if env
+
+      if context_path
+        d['web'] = {}
+        d['web']['context'] = context_path
+      end
+
+      d
+    end
+
+    def deploy_yaml(deployment_descriptor, opts = {})
+      name = normalize_yaml_name( find_option( opts, 'name' ) || deployment_name(opts[:root] || opts['root']) )
+      dest_dir = opts[:dest_dir] || opts['dest_dir'] || deploy_dir
+      deployment = File.join( dest_dir, name )
+      File.open( deployment, 'w' ) do |file|
+        YAML.dump( deployment_descriptor, file )
+      end
+      FileUtils.touch( dodeploy_file( name, dest_dir ) )
+      [name, dest_dir]
     end
 
   end #end of class << self
