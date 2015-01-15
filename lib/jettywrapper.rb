@@ -12,13 +12,11 @@ require 'logger'
 
 Dir[File.expand_path(File.join(File.dirname(__FILE__),"tasks/*.rake"))].each { |ext| load ext } if defined?(Rake)
 
-
 # Jettywrapper is a Singleton class, so you can only create one jetty instance at a time.
 class Jettywrapper
 
   include Singleton
   include ActiveSupport::Benchmarkable
-
 
   attr_accessor :jetty_home   # Jetty's home directory
   attr_accessor :port         # Jetty's port.  Default is 8888.  Note that attribute is named port, but params passed in expect :jetty_port
@@ -34,7 +32,6 @@ class Jettywrapper
     self.base_path = self.class.app_root
   end
 
-
   # Methods inside of the class << self block can be called directly on Jettywrapper, as class methods.
   # Methods outside the class << self block must be called on Jettywrapper.instance, as instance methods.
   class << self
@@ -42,7 +39,7 @@ class Jettywrapper
     attr_writer :hydra_jetty_version, :url, :tmp_dir, :jetty_dir, :env
 
     def hydra_jetty_version
-      @hydra_jetty_version ||= 'v7.0.0'
+      @hydra_jetty_version ||= 'v8.1.1'
     end
 
     def url
@@ -162,7 +159,6 @@ class Jettywrapper
       config[config_name] || config['default'.freeze]
     end
 
-
     # Set the jetty parameters. It accepts a Hash of symbols.
     # @param [Hash<Symbol>] params
     #  :jetty_home Required. Jetty's home direcotry
@@ -185,7 +181,6 @@ class Jettywrapper
       jetty_server.jetty_opts = params[:jetty_opts] || []
       return jetty_server
     end
-
 
     # Wrap the tests. Startup jetty, yield to the test task, capture any errors, shutdown
     # jetty, and return the error.
@@ -429,7 +424,6 @@ class Jettywrapper
       end
     end
   end
-
 
   # The fully qualified path to the pid_file
   def pid_path
