@@ -30,6 +30,7 @@ class UMichwrapper
   attr_accessor :fedora_url
   attr_accessor :app_name
   attr_accessor :deploy_dir
+  attr_accessor :base_path
 
   # configure the singleton with some defaults
   def initialize(params = {})
@@ -145,8 +146,8 @@ class UMichwrapper
 
       tupac.startup_wait = params[:startup_wait] || 5
 
-      tupac.app_name = params[:app_name] || File.basename(self.base_path)
-      tupac.deploy_dir = params[:deploy_dir] || File.join( self.torq_home, "deployments" )
+      tupac.app_name   = params[:app_name]   || File.basename( tupac.base_path )
+      tupac.deploy_dir = params[:deploy_dir] || File.join( tupac.torq_home, "deployments" )
 
       return tupac
     end
