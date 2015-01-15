@@ -83,30 +83,30 @@ class UMichwrapper
 
     def load_config(config_name = env)
       @env = config_name
-      jetty_file = "#{app_root}/config/jetty.yml"
+      umich_file = "#{app_root}/config/umich.yml"
 
-      unless File.exists?(jetty_file)
-        logger.warn "Didn't find expected jettywrapper config file at #{jetty_file}, using default file instead."
-        jetty_file = File.expand_path("../config/jetty.yml", File.dirname(__FILE__))
+      unless File.exists?(umich_file)
+        logger.warn "Did not find umichwrapper config file at #{umich_file}. Using default file instead."
+        umich_file = File.expand_path("../config/umich.yml", File.dirname(__FILE__))
       end
 
       begin
-        jetty_erb = ERB.new(IO.read(jetty_file)).result(binding)
+        umich_erb = ERB.new(IO.read(umich_file)).result(binding)
       rescue
-        raise("jetty.yml was found, but could not be parsed with ERB. \n#{$!.inspect}")
+        raise("umich.yml was found, but could not be parsed with ERB. \n#{$!.inspect}")
       end
 
       begin
-        jetty_yml = YAML::load(jetty_erb)
+        umich_yml = YAML::load(umich_erb)
       rescue
-        raise("jetty.yml was found, but could not be parsed.\n")
+        raise("umich.yml was found, but could not be parsed.\n")
       end
 
-      if jetty_yml.nil? || !jetty_yml.is_a?(Hash)
-        raise("jetty.yml was found, but was blank or malformed.\n")
+      if umich_yml.nil? || !umich_yml.is_a?(Hash)
+        raise("umich.yml was found, but was blank or malformed.\n")
       end
 
-      config = jetty_yml.with_indifferent_access
+      config = umich_yml.with_indifferent_access
       config[config_name] || config['default'.freeze]
     end
 
