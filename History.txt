@@ -1,5 +1,9 @@
+2.0.0
+  Jettywrapper.start should trigger unzip [Chris Beer (@cbeer)]
+  Jettywrapper should support Fedora 4 by using hydra-jetty 8.1.1 [Mike Giarlo (@mjgiarlo)]
+
 1.8.0
-  2014-07-16: Removed mediashelf-loggable dependency [Justin Coyne]
+  Removed mediashelf-loggable dependency [Justin Coyne]
 
 1.4.0
   Download jetty from a zip file
