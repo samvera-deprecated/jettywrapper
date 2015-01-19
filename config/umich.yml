@@ -1,2 +1,5 @@
-umich_default:
+development:
   startup_wait: 7
+
+testing:
+  startup_wait: 9
