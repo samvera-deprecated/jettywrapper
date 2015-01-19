@@ -18,10 +18,6 @@ namespace :umich do
   desc "Start application."
   task :start => :environment do
     UMichwrapper.start(UMICH_CONFIG)
-    
-    deploy_name = UMichwrapper.deploy_yaml(UMICH_CONFIG)
-  
-    puts "Deployed: #{deploy_name}"
   end
   
   desc "Stop application."
@@ -45,7 +41,7 @@ namespace :umich do
 
   desc "Print the environment config."
   task :penv => :environment do
-    UMichwrapper.print_config
+    UMichwrapper.print_config(UMICH_CONFIG)
   end
 
 

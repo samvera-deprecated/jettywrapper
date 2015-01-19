@@ -82,7 +82,7 @@ class UMichwrapper
       'development'
     end
 
-    def load_config(config_name = env)
+    def load_config(config_name = env() )
       @env = config_name
       umich_file = "#{app_root}/config/umich.yml"
 
@@ -108,6 +108,7 @@ class UMichwrapper
       end
 
       config = umich_yml.with_indifferent_access
+      
       config[config_name] || config['default'.freeze]
     end
 
@@ -305,7 +306,7 @@ class UMichwrapper
       @@logger ||= defined?(::Rails) && Rails.logger ? ::Rails.logger : ::Logger.new(STDOUT)
     end
 
-    def deployment_descriptor(params)
+    def deployment_descriptor(params=nil)
       UMichwrapper.configure(params)
 
       ddir = UMichwrapper.instance.deploy_dir
@@ -313,29 +314,17 @@ class UMichwrapper
 
       d = {}
       d['application'] = {}
-      d['application']['root'] = UMichwrapper.app_root
+      d['application']['root'] = "#{UMichwrapper.app_root}"
       d['environment'] = {}
       d['environment']['RAILS_ENV'] =  "development"
       d['environment']['RAILS_RELATIVE_URL_ROOT'] = "/"
 
       d['web'] = {}
-      d['web']['context'] = "tb/quod-dev/$sandbox.quod.lib/testapp/"
+      d['web']['context'] = "tb/quod-dev/#{ENV['USER']}.quod.lib/testapp/"
 
       d
     end
 
-    def deploy_yaml(params)
-      UMichwrapper.configure(params)
-      knobname = "#{ENV['USER']}-#{UMichwrapper.instance.app_name}-knob.yml"
-      knob_file_path = File.join(UMichwrapper.instance.deploy_dir, knobname)
-
-
-      File.open( knob_file_path, 'w' ) do |file|
-        YAML.dump( deployment_descriptor, file )
-      end
-      FileUtils.touch( "#{knob_file_path}.dodeploy" )
-
-    end
 
   end #end of class << self
 
@@ -370,9 +359,23 @@ class UMichwrapper
     # If -knob.yml.failed is present, previous deployment failed.
 
     # Write -knob.yml if not present and touch -know.yml.dodeploy
-    
+    UMichwrapper.deploy_yaml
+
     # Wait until -knob.yml.deployed or -knob.yml.failed appears
     startup_wait!
+  end
+
+  def deploy_yaml(clobber=false)
+    knobname = "#{ENV['USER']}-#{self.app_name}-knob.yml"
+    knob_file_path = File.join(self.deploy_dir, knobname)
+
+    # Only write the knob file if file doesn't exist or clober is true
+    if !File.exist?(knob_file_path) || clobber == true
+      File.open( knob_file_path, 'w' ) do |file|
+        YAML.dump( deployment_descriptor, file )
+      end
+    end
+    FileUtils.touch( "#{knob_file_path}.dodeploy" )
   end
 
   # Wait for the jetty server to start and begin listening for requests
