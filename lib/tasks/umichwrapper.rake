@@ -11,8 +11,8 @@ namespace :umich do
   
   desc "Return the status of application."
   task :status => :environment do
-    status = UMichwrapper.is_deployed?(UMICH_CONFIG) ? "App is deployed." : "App is NOT deployed."
-    puts status
+    status = UMichwrapper.status(UMICH_CONFIG)
+    puts "Applications status: #{status}"
   end
   
   desc "Start application."
@@ -23,7 +23,6 @@ namespace :umich do
   desc "Stop application."
   task :stop => :environment do
     UMichwrapper.stop(UMICH_CONFIG)
-    puts "jetty stopped"
   end
   
   desc "Restarts application."
