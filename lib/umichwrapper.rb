@@ -108,7 +108,6 @@ class UMichwrapper
       end
 
       config = umich_yml.with_indifferent_access
-      
       config[config_name] || config['default'.freeze]
     end
 
@@ -279,22 +278,6 @@ class UMichwrapper
       return false
     end
 
-    # Check to see if the application is deployed.
-    def is_deployed?(params = {})
-      UMichwrapper.configure(params)
-      ddir = UMichwrapper.instance.deploy_dir
-      appn = UMichwrapper.instance.app_name
-
-      if !File.exists? ddir
-        raise("Torquebox deployment dir does not exist: #{ddir}")
-      end
-
-      if File.exist? File.join(ddir, "#{appn}-knob.yml.deployed")
-        return true
-      end
-
-      return false
-    end
 
     def logger=(logger)
       @@logger = logger
@@ -306,30 +289,34 @@ class UMichwrapper
       @@logger ||= defined?(::Rails) && Rails.logger ? ::Rails.logger : ::Logger.new(STDOUT)
     end
 
-    def deployment_descriptor(params=nil)
+    
+    def status(params)
       UMichwrapper.configure(params)
-
-      ddir = UMichwrapper.instance.deploy_dir
-      appn = UMichwrapper.instance.app_name
-
-      d = {}
-      d['application'] = {}
-      d['application']['root'] = "#{UMichwrapper.app_root}"
-      d['environment'] = {}
-      d['environment']['RAILS_ENV'] =  "development"
-      d['environment']['RAILS_RELATIVE_URL_ROOT'] = "/"
-
-      d['web'] = {}
-      d['web']['context'] = "tb/quod-dev/#{ENV['USER']}.quod.lib/testapp/"
-
-      d
+      return ["deployed","undeployed","failed",""]
     end
+
 
 
   end #end of class << self
 
   def logger
     self.class.logger
+  end
+
+  # Check to see if the application is deployed.
+  def is_deployed?(params = {})
+    ddir = self.deploy_dir
+    appn = self.app_name
+
+    if !File.exists? ddir
+      raise("Torquebox deployment dir does not exist: #{ddir}")
+    end
+
+    if File.exist? File.join(ddir, "#{appn}-knob.yml.deployed")
+      return true
+    end
+
+    return false
   end
 
   # Start the jetty server. Check the pid file to see if it is running already,
@@ -351,7 +338,7 @@ class UMichwrapper
     # Check to see if we can start.
     # 0. Torquebox deployments exists and is writable.
     # 1. If a .deployed file exists, app is already deployed.
-    if UMichwrapper.is_deployed?
+    if is_deployed?
       puts "Application already deployed."
       return
     end
@@ -359,10 +346,28 @@ class UMichwrapper
     # If -knob.yml.failed is present, previous deployment failed.
 
     # Write -knob.yml if not present and touch -know.yml.dodeploy
-    UMichwrapper.deploy_yaml
+    deploy_yaml
 
     # Wait until -knob.yml.deployed or -knob.yml.failed appears
     startup_wait!
+  end
+
+  def deployment_descriptor()
+    ddir = self.deploy_dir
+    appn = self.app_name
+
+    # The deployment descriptor is a hash
+    d = {}
+    d['application'] = {}
+    d['application']['root'] = "#{UMichwrapper.app_root}"
+    d['environment'] = {}
+    d['environment']['RAILS_ENV'] =  "development"
+    d['environment']['RAILS_RELATIVE_URL_ROOT'] = "/"
+
+    d['web'] = {}
+    d['web']['context'] = "tb/quod-dev/#{ENV['USER']}.quod.lib/testapp/"
+
+    return d
   end
 
   def deploy_yaml(clobber=false)
@@ -378,14 +383,24 @@ class UMichwrapper
     FileUtils.touch( "#{knob_file_path}.dodeploy" )
   end
 
+  def undeploy_yaml
+    knobname = "#{ENV['USER']}-#{self.app_name}-knob.yml"
+    knob_file_path = File.join(self.deploy_dir, knobname)
+
+    Dir.glob("#{knob_file_path}*") do |p|
+      File.delete(p)
+      puts "Found & removed #{p}"
+    end
+  end
+
   # Wait for the jetty server to start and begin listening for requests
   def startup_wait!
     begin
-    Timeout::timeout(startup_wait) do
-      sleep 1 until (UMichwrapper.is_deployed?)
+    Timeout::timeout(self.startup_wait) do
+      sleep 1 until (is_deployed?)
     end
     rescue Timeout::Error
-      logger.warn "Waited #{startup_wait} seconds for torquebox to deploy, but it is not yet. Continuing anyway."
+      logger.warn "App not deployed after #{self.startup_wait} seconds. Continuing anyway."
     end
   end
 
@@ -396,14 +411,18 @@ class UMichwrapper
   #    UMichwrapper.instance.stop
   #    return UMichwrapper.instance
   def stop
-    logger.debug "Stop and undeploy called for app_name"
-    if UMichwrapper.is_deployed?
-      # Undeploy by removing -knob.yml.deployed file
-      puts "Undeploying app_name"
-    else
-      puts "app_name is not deployed on torquebox_deployments"
+    app_name = File.basename(self.base_path)
+    deploy_dir = File.join( self.torq_home, "deployments" )
+
+    if is_deployed? == false
+      logger.debug "#{app_name} is not currently deployed to #{deploy_dir}."
     end
+
+    # Undeploy by removing -knob.yml.deployed file
+    logger.debug "Un-deploying the following application:"
+    logger.debug "app_name: #{app_name}"
+    logger.debug "deploy_dir: #{deploy_dir}"
+    undeploy_yaml
+
   end
-
-
 end
