@@ -11,7 +11,7 @@ namespace :umich do
   
   desc "Return the status of application."
   task :status => :environment do
-    status = UMichwrapper.is_jetty_running?(UMICH_CONFIG) ? "Running: #{UMichwrapper.pid(UMICH_CONFIG)}" : "Not running"
+    status = UMichwrapper.is_deployed?(UMICH_CONFIG) ? "App is deployed." : "App is NOT deployed."
     puts status
   end
   
@@ -19,17 +19,11 @@ namespace :umich do
   task :start => :environment do
     UMichwrapper.start(UMICH_CONFIG)
     
-    descriptor = TorqueBox::DeployUtils.basic_deployment_descriptor( :context_path => args[:context_path] )
-    deployment_name, deploy_dir = TorqueBox::DeployUtils.deploy_yaml( descriptor, args )
+    deploy_name = UMichwrapper.deploy_yaml(UMICH_CONFIG)
   
-    puts "Deployed: #{deployment_name}"
-    puts "    into: #{deploy_dir}"
+    puts "Deployed: #{deploy_name}"
   end
   
-  desc "Deploy the app in the current directory"
-  task :deploy, [:context_path, :name] => ['torquebox:check'] do |t, args|
-  end
-
   desc "Stop application."
   task :stop => :environment do
     UMichwrapper.stop(UMICH_CONFIG)
