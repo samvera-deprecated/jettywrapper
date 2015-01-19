@@ -41,7 +41,7 @@ class UMichwrapper
   # Methods outside the class << self block must be called on UMichwrapper.instance, as instance methods.
   class << self
 
-    attr_writer :hydra_jetty_version, :url, :tmp_dir, :jetty_dir, :env
+    attr_writer :hydra_jetty_version, :url, :env
 
     def hydra_jetty_version
       @hydra_jetty_version ||= 'v7.0.0'
@@ -111,7 +111,6 @@ class UMichwrapper
       config[config_name] || config['default'.freeze]
     end
 
-
     # Set the parameters for the instance.
     # @note tupac represents the one and only wrapper instance.
     #
@@ -131,7 +130,8 @@ class UMichwrapper
     #   :solr_url   the user specific url against which requests will resolve
     #
     #   :startup_wait How many seconds to wait before starting tests. Deployment may take a while.
-    def configure(params = {})
+    def configure(params)
+      params ||= {}
       tupac = self.instance
 
       tupac.solr_home = params[:solr_home] || "/l/local/solr/#{ENV['USER']}"
@@ -165,6 +165,7 @@ class UMichwrapper
       puts "#{tupac.startup_wait}"
       puts "#{tupac.app_name}"
       puts "#{tupac.deploy_dir}"
+      puts "#{UMichwrapper.app_root}"
     end
 
     # Wrap the tests. Startup jetty, yield to the test task, capture any errors, shutdown
@@ -278,28 +279,20 @@ class UMichwrapper
     end
 
     # Check to see if the application is deployed.
-    def is_deplyed?
-      app_name = File.basename(UMichwrapper.base_path)
-      deploy_dir = File.join( UMichwrapper.torq_home, "deployments" )
+    def is_deployed?(params = {})
+      UMichwrapper.configure(params)
+      ddir = UMichwrapper.instance.deploy_dir
+      appn = UMichwrapper.instance.app_name
 
-      if !File.exists? deploy_dir
-        raise("Torquebox deployment dir does not exist: #{deploy_dir}")
+      if !File.exists? ddir
+        raise("Torquebox deployment dir does not exist: #{ddir}")
       end
 
-      if File.exist? File.join(deploy_dir, "#{app_name}-knob.yml.deployed")
+      if File.exist? File.join(ddir, "#{appn}-knob.yml.deployed")
         return true
       end
 
       return false
-    end
-
-    # Check to see if the pid is actually running. This only works on unix.
-    def is_pid_running?(pid)
-      begin
-        return Process.getpgid(pid) != -1
-      rescue Errno::ESRCH
-        return false
-      end
     end
 
     def logger=(logger)
@@ -312,37 +305,36 @@ class UMichwrapper
       @@logger ||= defined?(::Rails) && Rails.logger ? ::Rails.logger : ::Logger.new(STDOUT)
     end
 
-    def basic_deployment_descriptor(options = {})
-      env = options[:env] || options['env']
-      env ||= defined?(RACK_ENV) ? RACK_ENV : ENV['RACK_ENV']
-      env ||= defined?(::Rails) && Rails.respond_to?(:env) ? ::Rails.env : ENV['RAILS_ENV']
+    def deployment_descriptor(params)
+      UMichwrapper.configure(params)
 
-      root = options[:root] || options['root'] || Dir.pwd
-      context_path = options[:context_path] || options['context_path']
+      ddir = UMichwrapper.instance.deploy_dir
+      appn = UMichwrapper.instance.app_name
 
       d = {}
       d['application'] = {}
-      d['application']['root'] = root
+      d['application']['root'] = UMichwrapper.app_root
       d['environment'] = {}
-      d['environment']['RACK_ENV'] = env.to_s if env
+      d['environment']['RAILS_ENV'] =  "development"
+      d['environment']['RAILS_RELATIVE_URL_ROOT'] = "/"
 
-      if context_path
-        d['web'] = {}
-        d['web']['context'] = context_path
-      end
+      d['web'] = {}
+      d['web']['context'] = "tb/quod-dev/$sandbox.quod.lib/testapp/"
 
       d
     end
 
-    def deploy_yaml(deployment_descriptor, opts = {})
-      name = normalize_yaml_name( find_option( opts, 'name' ) || deployment_name(opts[:root] || opts['root']) )
-      dest_dir = opts[:dest_dir] || opts['dest_dir'] || deploy_dir
-      deployment = File.join( dest_dir, name )
-      File.open( deployment, 'w' ) do |file|
+    def deploy_yaml(params)
+      UMichwrapper.configure(params)
+      knobname = "#{ENV['USER']}-#{UMichwrapper.instance.app_name}-knob.yml"
+      knob_file_path = File.join(UMichwrapper.instance.deploy_dir, knobname)
+
+
+      File.open( knob_file_path, 'w' ) do |file|
         YAML.dump( deployment_descriptor, file )
       end
-      FileUtils.touch( dodeploy_file( name, dest_dir ) )
-      [name, dest_dir]
+      FileUtils.touch( "#{knob_file_path}.dodeploy" )
+
     end
 
   end #end of class << self
