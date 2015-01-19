@@ -1,5 +1,5 @@
 development:
-  startup_wait: 7
+  startup_wait: 15
 
 testing:
   startup_wait: 9
