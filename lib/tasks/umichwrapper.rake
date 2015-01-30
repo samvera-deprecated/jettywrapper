@@ -1,55 +1,48 @@
-## These tasks get loaded into the host application when jettywrapper is required
+## These tasks get loaded into the host application when umichwrapper is required
 require 'yaml'
 
 namespace :umich do
   JETTY_DIR = 'jetty'
 
-  desc "download the jetty zip file"
-  task :download do
-    UMichwrapper.download
-  end
-
-  desc "unzip the downloaded jetty archive"
-  task :unzip do
-    UMichwrapper.unzip
-  end
-
-  desc "remove the jetty directory and recreate it"
+  desc "Empty fedora node and solr index."
   task :clean do
     UMichwrapper.clean
   end
   
-  desc "Return the status of jetty"
+  desc "Return the status of application."
   task :status => :environment do
-    status = UMichwrapper.is_jetty_running?(JETTY_CONFIG) ? "Running: #{UMichwrapper.pid(JETTY_CONFIG)}" : "Not running"
-    puts status
+    status = UMichwrapper.status(UMICH_CONFIG)
+    puts "Applications status: #{status}"
   end
   
-  desc "Start jetty"
+  desc "Start application."
   task :start => :environment do
-    UMichwrapper.start(JETTY_CONFIG)
-    puts "jetty started at PID #{UMichwrapper.pid(JETTY_CONFIG)}"
+    UMichwrapper.start(UMICH_CONFIG)
   end
   
-  desc "stop jetty"
+  desc "Stop application."
   task :stop => :environment do
-    UMichwrapper.stop(JETTY_CONFIG)
-    puts "jetty stopped"
+    UMichwrapper.stop(UMICH_CONFIG)
   end
   
-  desc "Restarts jetty"
+  desc "Restarts application."
   task :restart => :environment do
-    UMichwrapper.stop(JETTY_CONFIG)
-    UMichwrapper.start(JETTY_CONFIG)
+    UMichwrapper.stop(UMICH_CONFIG)
+    UMichwrapper.start(UMICH_CONFIG)
   end
 
-
-  desc "Load the jetty config"
+  desc "Load the umich environment from config."
   task :environment do
-    unless defined? JETTY_CONFIG
-      JETTY_CONFIG = UMichwrapper.load_config
+    unless defined? UMICH_CONFIG
+      UMICH_CONFIG = UMichwrapper.load_config
     end
   end
+
+  desc "Print the environment config."
+  task :penv => :environment do
+    UMichwrapper.print_config(UMICH_CONFIG)
+  end
+
 
 end
 

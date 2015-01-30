@@ -19,83 +19,32 @@ class UMichwrapper
   include Singleton
   include ActiveSupport::Benchmarkable
 
-
-  attr_accessor :jetty_home   # Jetty's home directory
-  attr_accessor :port         # Jetty's port.  Default is 8888.  Note that attribute is named port, but params passed in expect :jetty_port
   attr_accessor :startup_wait # How many seconds to wait for jetty to spin up. Default is 5.
-  attr_accessor :quiet        # true (default) to reduce Jetty's output
-  attr_accessor :solr_home    # Solr's home directory. Default is jetty_home/solr
-  attr_accessor :base_path    # The root of the application. Used for determining where log files and PID files should go.
-  attr_accessor :java_opts    # Options to pass to java (ex. ["-Xmx512mb", "-Xms128mb"])
-  attr_accessor :jetty_opts   # Options to pass to jetty (ex. ["etc/my_jetty.xml", "etc/other.xml"] as in http://wiki.eclipse.org/Jetty/Reference/jetty.xml_usage
+  attr_accessor :solr_home
+  attr_accessor :solr_host
+  attr_accessor :solr_port
+  attr_accessor :fedora_host
+  attr_accessor :fedora_port
+  attr_accessor :torq_home
+  attr_accessor :solr_url
+  attr_accessor :fedora_url
+  attr_accessor :app_name
+  attr_accessor :deploy_dir
+  attr_accessor :base_path
 
   # configure the singleton with some defaults
   def initialize(params = {})
     self.base_path = self.class.app_root
   end
 
-
   # Methods inside of the class << self block can be called directly on UMichwrapper, as class methods.
   # Methods outside the class << self block must be called on UMichwrapper.instance, as instance methods.
   class << self
 
-    attr_writer :hydra_jetty_version, :url, :tmp_dir, :jetty_dir, :env
+    attr_writer :hydra_jetty_version, :url, :env
 
     def hydra_jetty_version
       @hydra_jetty_version ||= 'v7.0.0'
-    end
-
-    def url
-      @url ||= defined?(ZIP_URL) ? ZIP_URL : "https://github.com/projecthydra/hydra-jetty/archive/#{hydra_jetty_version}.zip"
-      @url
-    end
-
-    def tmp_dir
-      @tmp_dir ||= 'tmp'
-    end
-
-    def zip_file
-      ENV['JETTY_ZIP'] || File.join(tmp_dir, url.split('/').last)
-    end
-
-    def jetty_dir
-      @jetty_dir ||= 'jetty'
-    end
-
-    def download(url = nil)
-      return if File.exists? zip_file
-      self.url = url if url
-      logger.info "Downloading jetty at #{self.url} ..."
-      FileUtils.mkdir tmp_dir unless File.exists? tmp_dir
-      system "curl -L #{self.url} -o #{zip_file}"
-      abort "Unable to download jetty from #{self.url}" unless $?.success?
-    end
-
-    def unzip
-      download unless File.exists? zip_file
-      logger.info "Unpacking #{zip_file}..."
-      tmp_save_dir = File.join tmp_dir, 'jetty_generator'
-      system "unzip -d #{tmp_save_dir} -qo #{zip_file}"
-      abort "Unable to unzip #{zip_file} into tmp_save_dir/" unless $?.success?
-
-      # Remove the old jetty directory if it exists
-      system "rm -r #{jetty_dir}" if File.directory?(jetty_dir)
-
-      # Move the expanded zip file into the final destination.
-      expanded_dir = expanded_zip_dir(tmp_save_dir)
-      system "mv #{expanded_dir} #{jetty_dir}"
-      abort "Unable to move #{expanded_dir} into #{jetty_dir}/" unless $?.success?
-    end
-
-    def expanded_zip_dir(tmp_save_dir)
-      # This old way is more specific, but won't work for blacklight-jetty
-      #expanded_dir = Dir[File.join(tmp_save_dir, "hydra-jetty-*")].first
-      Dir[File.join(tmp_save_dir, "*")].first
-    end
-
-    def clean
-      system "rm -rf #{jetty_dir}"
-      unzip
     end
 
     def reset_config
@@ -133,59 +82,91 @@ class UMichwrapper
       'development'
     end
 
-    def load_config(config_name = env)
+    def load_config(config_name = env() )
       @env = config_name
-      jetty_file = "#{app_root}/config/jetty.yml"
+      umich_file = "#{app_root}/config/umich.yml"
 
-      unless File.exists?(jetty_file)
-        logger.warn "Didn't find expected jettywrapper config file at #{jetty_file}, using default file instead."
-        jetty_file = File.expand_path("../config/jetty.yml", File.dirname(__FILE__))
+      unless File.exists?(umich_file)
+        logger.warn "Did not find umichwrapper config file at #{umich_file}. Using default file instead."
+        umich_file = File.expand_path("../config/umich.yml", File.dirname(__FILE__))
       end
 
       begin
-        jetty_erb = ERB.new(IO.read(jetty_file)).result(binding)
+        umich_erb = ERB.new(IO.read(umich_file)).result(binding)
       rescue
-        raise("jetty.yml was found, but could not be parsed with ERB. \n#{$!.inspect}")
+        raise("umich.yml was found, but could not be parsed with ERB. \n#{$!.inspect}")
       end
 
       begin
-        jetty_yml = YAML::load(jetty_erb)
+        umich_yml = YAML::load(umich_erb)
       rescue
-        raise("jetty.yml was found, but could not be parsed.\n")
+        raise("umich.yml was found, but could not be parsed.\n")
       end
 
-      if jetty_yml.nil? || !jetty_yml.is_a?(Hash)
-        raise("jetty.yml was found, but was blank or malformed.\n")
+      if umich_yml.nil? || !umich_yml.is_a?(Hash)
+        raise("umich.yml was found, but was blank or malformed.\n")
       end
 
-      config = jetty_yml.with_indifferent_access
+      config = umich_yml.with_indifferent_access
       config[config_name] || config['default'.freeze]
     end
 
-
-    # Set the jetty parameters. It accepts a Hash of symbols.
+    # Set the parameters for the instance.
+    # @note tupac represents the one and only wrapper instance.
+    #
+    # @return instance
+    #
     # @param [Hash<Symbol>] params
-    #  :jetty_home Required. Jetty's home direcotry
-    #  :jetty_port  Jetty's port.  Default is 8888.   Note that attribute is named port, but params passed in expect :jetty_port
-    #  :startup_wait How many seconds to wait for jetty to spin up.  Default is 5. If jetty doesn't finish spinning up, tests can fail because they can't reach jetty.
-    #  :solr_home Solr's home directory. Default is jetty_home/solr
-    #  :quiet Keep True(default) to reduce jetty's output
-    #  :java_opts options to pass to the jvm (ex. ["-Xmx512mb", "-Xms128mb"])
-    #  :jetty_opts options to pass to jetty (ex. ["etc/my_jetty.xml", "etc/other.xml"] as in http://wiki.eclipse.org/Jetty/Reference/jetty.xml_usage
-    def configure(params = {})
-      jetty_server = self.instance
-      jetty_server.reset_process!
-      jetty_server.quiet = params[:quiet].nil? ? true : params[:quiet]
+    #   :torq_home is the root directory of torquebox.
+    #
+    #   :solr_home is the root directory of the user's solr collection.
+    #   :solr_host is the name of the server on which solr is running.
+    #   :solr_port is the port number on which solr is listening.
+    #
+    #   :fedora_host
+    #   :fedora_port
+    #
+    #   :fedora_url the user specific url against which requests will resolve
+    #   :solr_url   the user specific url against which requests will resolve
+    #
+    #   :startup_wait How many seconds to wait before starting tests. Deployment may take a while.
+    def configure(params)
+      params ||= {}
+      tupac = self.instance
 
-      jetty_server.jetty_home = params[:jetty_home] || File.expand_path(File.join(app_root, 'jetty'))
-      jetty_server.solr_home = params[:solr_home]  || File.join( jetty_server.jetty_home, "solr")
-      jetty_server.port = params[:jetty_port] || 8888
-      jetty_server.startup_wait = params[:startup_wait] || 5
-      jetty_server.java_opts = params[:java_opts] || []
-      jetty_server.jetty_opts = params[:jetty_opts] || []
-      return jetty_server
+      tupac.solr_home = params[:solr_home] || "/l/local/solr/#{ENV['USER']}"
+      tupac.solr_host = params[:solr_host] || "localhost"
+      tupac.solr_port = params[:solr_port] || 8080
+      tupac.fedora_host = params[:fedora_host] || "localhost"
+      tupac.fedora_port = params[:fedora_port] || 8080
+      tupac.torq_home = params[:torq_home] || "/l/local/torquebox"
+      
+      tupac.solr_url   = params[:solr_url]   || "#{tupac.solr_host}:#{tupac.solr_port}/solr/#{ENV['USER']}" 
+      tupac.fedora_url = params[:fedora_url] || "#{tupac.fedora_host}:#{tupac.fedora_port}/fcrepo/#{ENV['USER']}/dev" 
+
+      tupac.startup_wait = params[:startup_wait] || 5
+
+      tupac.app_name   = params[:app_name]   || File.basename( tupac.base_path )
+      tupac.deploy_dir = params[:deploy_dir] || File.join( tupac.torq_home, "deployments" )
+
+      return tupac
     end
 
+    def print_config(params = {})
+      tupac = configure( params )
+      puts "#{tupac.solr_home}"
+      puts "#{tupac.solr_host}"
+      puts "#{tupac.solr_port}"
+      puts "#{tupac.fedora_host}"
+      puts "#{tupac.fedora_port}"
+      puts "#{tupac.torq_home}"
+      puts "#{tupac.solr_url  }"
+      puts "#{tupac.fedora_url}"
+      puts "#{tupac.startup_wait}"
+      puts "#{tupac.app_name}"
+      puts "#{tupac.deploy_dir}"
+      puts "#{UMichwrapper.app_root}"
+    end
 
     # Wrap the tests. Startup jetty, yield to the test task, capture any errors, shutdown
     # jetty, and return the error.
@@ -231,7 +212,6 @@ class UMichwrapper
     # @example
     #    UMichwrapper.start(:jetty_home => '/path/to/jetty', :jetty_port => '8983')
     def start(params)
-      unzip unless File.exists? jetty_dir
       UMichwrapper.configure(params)
       UMichwrapper.instance.start
       return UMichwrapper.instance
@@ -298,14 +278,6 @@ class UMichwrapper
       return false
     end
 
-    # Check to see if the pid is actually running. This only works on unix.
-    def is_pid_running?(pid)
-      begin
-        return Process.getpgid(pid) != -1
-      rescue Errno::ESRCH
-        return false
-      end
-    end
 
     def logger=(logger)
       @@logger = logger
@@ -317,95 +289,119 @@ class UMichwrapper
       @@logger ||= defined?(::Rails) && Rails.logger ? ::Rails.logger : ::Logger.new(STDOUT)
     end
 
+    
+    def status(params)
+      UMichwrapper.configure(params)
+      return ["deployed","undeployed","failed",""]
+    end
+
+
+
   end #end of class << self
 
   def logger
     self.class.logger
   end
 
-  # What command is being run to invoke jetty?
-  def jetty_command
-    ["java", java_variables, java_opts, "-jar", "start.jar", jetty_opts].flatten
-  end
+  # Check to see if the application is deployed.
+  def is_deployed?(params = {})
+    ddir = self.deploy_dir
+    appn = self.app_name
 
-  def java_variables
-    ["-Djetty.port=#{@port}",
-     "-Dsolr.solr.home=#{Shellwords.escape(@solr_home)}"]
+    if !File.exists? ddir
+      raise("Torquebox deployment dir does not exist: #{ddir}")
+    end
+
+    if File.exist? File.join(ddir, "#{appn}-knob.yml.deployed")
+      return true
+    end
+
+    return false
   end
 
   # Start the jetty server. Check the pid file to see if it is running already,
   # and stop it if so. After you start jetty, write the PID to a file.
   # This is the instance start method. It must be called on UMichwrapper.instance
-  # You're probably better off using UMichwrapper.start(:jetty_home => "/path/to/jetty")
+  # You're probably better off using UMichwrapper.start()
   # @example
   #    UMichwrapper.configure(params)
   #    UMichwrapper.instance.start
   #    return UMichwrapper.instance
   def start
-    logger.debug "Starting jetty with these values: "
-    logger.debug "jetty_home: #{@jetty_home}"
-    logger.debug "jetty_command: #{jetty_command.join(' ')}"
+    app_name = File.basename(self.base_path)
+    deploy_dir = File.join( self.torq_home, "deployments" )
+
+    logger.debug "Deploying application using the following parameters: "
+    logger.debug "app_name: #{app_name}"
+    logger.debug "deploy_dir: #{deploy_dir}"
 
     # Check to see if we can start.
-    # 1. If there is a pid, check to see if it is really running
-    # 2. Check to see if anything is blocking the port we want to use
-    if pid
-      if UMichwrapper.is_pid_running?(pid)
-        raise("Server is already running with PID #{pid}")
-      else
-        logger.warn "Removing stale PID file at #{pid_path}"
-        File.delete(pid_path)
+    # 0. Torquebox deployments exists and is writable.
+    # 1. If a .deployed file exists, app is already deployed.
+    if is_deployed?
+      puts "Application already deployed."
+      return
+    end
+
+    # If -knob.yml.failed is present, previous deployment failed.
+
+    # Write -knob.yml if not present and touch -know.yml.dodeploy
+    deploy_yaml
+
+    # Wait until -knob.yml.deployed or -knob.yml.failed appears
+    startup_wait!
+  end
+
+  def deployment_descriptor()
+    ddir = self.deploy_dir
+    appn = self.app_name
+
+    # The deployment descriptor is a hash
+    d = {}
+    d['application'] = {}
+    d['application']['root'] = "#{UMichwrapper.app_root}"
+    d['environment'] = {}
+    d['environment']['RAILS_ENV'] =  "development"
+    d['environment']['RAILS_RELATIVE_URL_ROOT'] = "/"
+
+    d['web'] = {}
+    d['web']['context'] = "tb/quod-dev/#{ENV['USER']}.quod.lib/testapp/"
+
+    return d
+  end
+
+  def deploy_yaml(clobber=false)
+    knobname = "#{ENV['USER']}-#{self.app_name}-knob.yml"
+    knob_file_path = File.join(self.deploy_dir, knobname)
+
+    # Only write the knob file if file doesn't exist or clober is true
+    if !File.exist?(knob_file_path) || clobber == true
+      File.open( knob_file_path, 'w' ) do |file|
+        YAML.dump( deployment_descriptor, file )
       end
     end
-    if UMichwrapper.is_port_in_use?(self.port)
-      raise("Port #{self.port} is already in use.")
-    end
-    benchmark "Started jetty" do
-      Dir.chdir(@jetty_home) do
-        process.start
-      end
-      FileUtils.makedirs(pid_dir) unless File.directory?(pid_dir)
-      begin
-        f = File.new(pid_path,  "w")
-      rescue Errno::ENOENT, Errno::EACCES
-        f = File.new(File.join(base_path,'tmp',pid_file),"w")
-      end
-      f.puts "#{process.pid}"
-      f.close
-      logger.debug "Wrote pid file to #{pid_path} with value #{process.pid}"
-      startup_wait!
+    FileUtils.touch( "#{knob_file_path}.dodeploy" )
+  end
+
+  def undeploy_yaml
+    knobname = "#{ENV['USER']}-#{self.app_name}-knob.yml"
+    knob_file_path = File.join(self.deploy_dir, knobname)
+
+    Dir.glob("#{knob_file_path}*") do |p|
+      File.delete(p)
+      puts "Found & removed #{p}"
     end
   end
 
   # Wait for the jetty server to start and begin listening for requests
   def startup_wait!
     begin
-    Timeout::timeout(startup_wait) do
-      sleep 1 until (UMichwrapper.is_port_in_use? self.port)
+    Timeout::timeout(self.startup_wait) do
+      sleep 1 until (is_deployed?)
     end
     rescue Timeout::Error
-      logger.warn "Waited #{startup_wait} seconds for jetty to start, but it is not yet listening on port #{self.port}. Continuing anyway."
+      logger.warn "App not deployed after #{self.startup_wait} seconds. Continuing anyway."
     end
-  end
-
-  def process
-    @process ||= begin
-       process = ChildProcess.build(*jetty_command)
-       if self.quiet
-         process.io.stderr = File.open(File.expand_path("jettywrapper.log"), "w+")
-         process.io.stdout = process.io.stderr
-         logger.warn "Logging jettywrapper stdout to #{File.expand_path(process.io.stderr.path)}"
-       else
-         process.io.inherit!
-       end
-       process.detach = true
-
-       process
-     end
-  end
-
-  def reset_process!
-    @process = nil
   end
 
   # Instance stop method. Must be called on UMichwrapper.instance
@@ -415,58 +411,18 @@ class UMichwrapper
   #    UMichwrapper.instance.stop
   #    return UMichwrapper.instance
   def stop
-    logger.debug "Instance stop method called for pid '#{pid}'"
-    if pid
-      if @process
-        @process.stop
-      else
-        Process.kill("KILL", pid) rescue nil
-      end
+    app_name = File.basename(self.base_path)
+    deploy_dir = File.join( self.torq_home, "deployments" )
 
-      begin
-        File.delete(pid_path)
-      rescue
-      end
+    if is_deployed? == false
+      logger.debug "#{app_name} is not currently deployed to #{deploy_dir}."
     end
-  end
 
+    # Undeploy by removing -knob.yml.deployed file
+    logger.debug "Un-deploying the following application:"
+    logger.debug "app_name: #{app_name}"
+    logger.debug "deploy_dir: #{deploy_dir}"
+    undeploy_yaml
 
-  # The fully qualified path to the pid_file
-  def pid_path
-    #need to memoize this, becasuse the base path could be relative and the cwd can change in the yield block of wrap
-    @path ||= File.join(pid_dir, pid_file)
-  end
-
-  # The file where the process ID will be written
-  def pid_file
-    jetty_home_to_pid_file(@jetty_home)
-  end
-
-  # Take the @jetty_home value and transform it into a legal filename
-  # @return [String] the name of the pid_file
-  # @example
-  #    /usr/local/jetty1 => _usr_local_jetty1.pid
-  def jetty_home_to_pid_file(jetty_home)
-    begin
-      jetty_home.gsub(/\//,'_') << "_#{self.class.env}" << ".pid"
-    rescue Exception => e
-      raise "Couldn't make a pid file for jetty_home value #{jetty_home}\n  Caused by: #{e}"
-    end
-  end
-
-  # The directory where the pid_file will be written
-  def pid_dir
-    File.expand_path(File.join(base_path,'tmp','pids'))
-  end
-
-  # Check to see if there is a pid file already
-  # @return true if the file exists, otherwise false
-  def pid_file?
-    File.exist?(pid_path)
-  end
-
-  # the process id of the currently running jetty instance
-  def pid
-    File.open( pid_path ) { |f| return f.gets.to_i } if File.exist?(pid_path)
   end
 end
