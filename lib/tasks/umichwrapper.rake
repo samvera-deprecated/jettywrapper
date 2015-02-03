@@ -4,7 +4,12 @@ require 'yaml'
 namespace :umich do
   JETTY_DIR = 'jetty'
 
-  desc "Empty fedora node and solr index."
+  desc "Check that the solr-fedora archive has been downloaded."
+  task :download do
+    UMichwrapper.download
+  end
+
+  desc "Wipe the umich directory and copy in fresh contents."
   task :clean do
     UMichwrapper.clean
   end
