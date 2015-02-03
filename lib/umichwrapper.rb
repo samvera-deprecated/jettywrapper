@@ -41,16 +41,53 @@ class UMichwrapper
   # Methods outside the class << self block must be called on UMichwrapper.instance, as instance methods.
   class << self
 
-    attr_writer :hydra_jetty_version, :url, :env
+    attr_writer :hydra_jetty_version, :umich_dir, :loc, :env
 
     def hydra_jetty_version
-      @hydra_jetty_version ||= 'v7.0.0'
+      @hydra_jetty_version ||= 'v8.1.1'
+    end
+
+    # Return location of directories hydra-jetty versions
+    def loc
+      @loc = "/quod-dev/dev/grosscol/fedsolr"
+      @loc
+    end
+
+    # Return the name of the directory into which solr and fedora should be unpacked.
+    def umich_dir
+      @umich_dir ||= 'umich'
+    end
+
+    def unzip
+      download 
+      logger.info "Retrieving fresh solr and fedora..."
+
+      if File.directory?(umich_dir)
+        abort "Unable to copy into #{umich_dir}. Directory already exists."
+      end
+
+      # Move the expanded zip file into the final destination.
+      expanded_dir = "/quod-dev/dev/grosscol/fedsolr/hydra-jetty-#{self.hydra_jetty_version}"
+      FileUtils.cp_r(expanded_dir, umich_dir)
+    end
+
+    def download
+      # Check if directory exists
+      if !Dir.exist? "/quod-dev/dev/grosscol/fedsolr/hydra-jetty-#{self.hydra_jetty_version}"
+        abort "Unable to obtain solr and fedora from #{self.loc}" 
+      end
+    end
+
+    def clean
+      # Remove the old umich directory if it exists
+      FileUtils.rm_r umich_dir if File.directory?(umich_dir)
+      # Copy fresh contents from source
+      unzip
     end
 
     def reset_config
       @app_root = nil
       @env = nil
-      @url = nil
       @hydra_jetty_version = nil
     end
 
