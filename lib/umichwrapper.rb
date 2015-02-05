@@ -49,7 +49,7 @@ class UMichwrapper
 
     # Return location of directories hydra-jetty versions
     def loc
-      @loc = "/quod-dev/dev/grosscol/fedsolr"
+      @loc = "/quod-dev/dev/grosscol/solrfed"
       @loc
     end
 
@@ -66,14 +66,33 @@ class UMichwrapper
         abort "Unable to copy into #{umich_dir}. Directory already exists."
       end
 
-      # Move the expanded zip file into the final destination.
-      expanded_dir = "/quod-dev/dev/grosscol/fedsolr/hydra-jetty-#{self.hydra_jetty_version}"
+      # Move the expanded dir into the project destination.
+      expanded_dir = File.join(loc,"hydra-jetty-#{self.hydra_jetty_version}")
       FileUtils.cp_r(expanded_dir, umich_dir)
+
+      # Check that the web apps directories exist
+      exploded_solr_war   = File.join(umich_dir, "webapps", "#{ENV['USER']}.solr.war")
+      exploded_fedora_war = File.join(umich_dir, "webapps", "#{ENV['USER']}.fcrepo.war")
+      abort "#{exploded_solr_war} directory not found."   unless Dir.exist? exploded_solr_war
+      abort "#{exploded_fedora_war} directory not found." unless Dir.exist? exploded fedora_war 
+
+      # Generate jboss-web.xml for solr and fedora applications
+      fedora_jboss_xml = generate_jboss_web( {"fcrepo/home" => "/path/to/project/fcrepo"} )
+      solr_jboss_xml   = generate_jboss_web( {"solr/home" => "/path/to/project/solr"} )
+      File.open( File.join(exploded_fedora_war,"WEB-INF", "jboss-web.xml"), "w"){ |f| f.puts fedora_jboss_xml }
+      File.open( File.join(exploded_solr_war  ,"WEB-INF", "jboss-web.xml"), "w"){ |f| f.puts solr_jboss_xml }
+      
+    end
+
+    # Generate the jboss-web xml
+    def generate_jboss_web( env_hsh )
+      template = ERB.new( File.read("lib/jboss-web.xml.erb"))
+      xml_content = template.results(binding)
     end
 
     def download
       # Check if directory exists
-      if !Dir.exist? "/quod-dev/dev/grosscol/fedsolr/hydra-jetty-#{self.hydra_jetty_version}"
+      if !Dir.exist? File.join(loc,"hydra-jetty-#{self.hydra_jetty_version}")
         abort "Unable to obtain solr and fedora from #{self.loc}" 
       end
     end
