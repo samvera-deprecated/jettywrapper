@@ -44,7 +44,7 @@ class UMichwrapper
     attr_writer :hydra_jetty_version, :umich_dir, :loc, :env
 
     def hydra_jetty_version
-      @hydra_jetty_version ||= 'v8.1.1'
+      @hydra_jetty_version ||= '8.1.1'
     end
 
     # Return location of directories hydra-jetty versions
@@ -66,35 +66,47 @@ class UMichwrapper
         abort "Unable to copy into #{umich_dir}. Directory already exists."
       end
 
-      # Move the expanded dir into the project destination.
-      expanded_dir = File.join(loc,"hydra-jetty-#{self.hydra_jetty_version}")
+      # Copy the clean source dir into the project destination.
+      expanded_dir = File.join(loc,"hydra-jetty-#{hydra_jetty_version}")
       FileUtils.cp_r(expanded_dir, umich_dir)
 
-      # Check that the web apps directories exist
-      exploded_solr_war   = File.join(umich_dir, "webapps", "#{ENV['USER']}.solr.war")
-      exploded_fedora_war = File.join(umich_dir, "webapps", "#{ENV['USER']}.fcrepo.war")
+      # Check that the web apps directories exist, and rename them to the custom war names
+      exploded_solr_war   = File.join(umich_dir, "webapps", "uniquename.solr.war")
+      exploded_fedora_war = File.join(umich_dir, "webapps", "uniquename.fedora.war")
+      custom_solr_war   = File.join(umich_dir, "webapps", "#{ENV['USER']}.solr.war")
+      custom_fedora_war = File.join(umich_dir, "webapps", "#{ENV['USER']}.fedora.war")
       abort "#{exploded_solr_war} directory not found."   unless Dir.exist? exploded_solr_war
-      abort "#{exploded_fedora_war} directory not found." unless Dir.exist? exploded fedora_war 
+      abort "#{exploded_fedora_war} directory not found." unless Dir.exist? exploded_fedora_war 
+      FileUtils.mv( exploded_solr_war, custom_solr_war )
+      FileUtils.mv( exploded_fedora_war, custom_fedora_war )
 
-      # Generate jboss-web.xml for solr and fedora applications
+      # Generate jboss-web.xml to customize solr and fedora applications for deployment.
+      logger.info "Generating jboss-web.xml deployment descriptor..."
+
+      solr_home = File.expande("umich/solr")
+      fcrepo_home = File.expand("umich/fcrepo")
       fedora_jboss_xml = generate_jboss_web( {"fcrepo/home" => "/path/to/project/fcrepo"} )
       solr_jboss_xml   = generate_jboss_web( {"solr/home" => "/path/to/project/solr"} )
-      File.open( File.join(exploded_fedora_war,"WEB-INF", "jboss-web.xml"), "w"){ |f| f.puts fedora_jboss_xml }
-      File.open( File.join(exploded_solr_war  ,"WEB-INF", "jboss-web.xml"), "w"){ |f| f.puts solr_jboss_xml }
+      File.open( File.join(custom_fedora_war,"WEB-INF", "jboss-web.xml"), "w"){ |f| f.puts fedora_jboss_xml }
+      File.open( File.join(custom_solr_war  ,"WEB-INF", "jboss-web.xml"), "w"){ |f| f.puts solr_jboss_xml }
       
     end
 
     # Generate the jboss-web xml
     def generate_jboss_web( env_hsh )
-      template = ERB.new( File.read("lib/jboss-web.xml.erb"))
-      xml_content = template.results(binding)
+      template_path = File.expand_path( "../umichwrapper/jboss-web.xml.erb", __FILE__ )
+      template = ERB.new( File.read(template_path))
+      xml_content = template.result(binding)
     end
 
     def download
-      # Check if directory exists
-      if !Dir.exist? File.join(loc,"hydra-jetty-#{self.hydra_jetty_version}")
-        abort "Unable to obtain solr and fedora from #{self.loc}" 
+      # Check if expanded directory exists
+      expanded_dir = File.join(loc,"hydra-jetty-#{hydra_jetty_version}")
+      if !Dir.exist? expanded_dir
+        abort "Could not to obtain solr and fedora from #{expanded_dir}" 
       end
+
+      # If not, revert to old download behavior
     end
 
     def clean
@@ -386,6 +398,11 @@ class UMichwrapper
   def start
     app_name = File.basename(self.base_path)
     deploy_dir = File.join( self.torq_home, "deployments" )
+    
+    # Deploy Solr and Fedora, but don't over-write
+    logger.debug "Deploying Solr & Fedora."
+
+    deploy_two_war
 
     logger.debug "Deploying application using the following parameters: "
     logger.debug "app_name: #{app_name}"
@@ -398,8 +415,6 @@ class UMichwrapper
       puts "Application already deployed."
       return
     end
-
-    # If -knob.yml.failed is present, previous deployment failed.
 
     # Write -knob.yml if not present and touch -know.yml.dodeploy
     deploy_yaml
@@ -424,6 +439,22 @@ class UMichwrapper
     d['web']['context'] = "tb/quod-dev/#{ENV['USER']}.quod.lib/testapp/"
 
     return d
+  end
+
+  def deploy_two_war(clobber=false)
+    solr_war_name = "#{ENV['USER']}.solr.war"
+    solr_war_src = File.join("umich","webapps", solr_war_name)
+    solr_war_dest = File.join (self.deploy_dir, solr_war_name)
+
+    fed_war_name = "#{ENV['USER']}.fedora.war"
+    fed_war_src = File.join("umich","webapps", fed_war_name)
+    fed_war_dest = File.join (self.deploy_dir, fed_war_name)
+
+    logger.debug("Copying #{solr_war_src} to #{solr_war_dest}")
+    FileUtils.cp_r( solr_war_src, solr_war_dest )
+
+    logger.debug("Copying #{fed_war_src} to #{fed_war_dest}")
+    FileUtils.cp_r( fed_war_src, fed_war_dest )
   end
 
   def deploy_yaml(clobber=false)
