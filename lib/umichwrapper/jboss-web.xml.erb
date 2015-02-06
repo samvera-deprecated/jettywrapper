@@ -6,10 +6,10 @@
     http://www.jboss.org/j2ee/schema/jboss-web_5_1.xsd">  
     <context-root>/tb/quod-dev/<%= ENV['USER'] %>.quod.lib/testapp</context-root>  
 
-    <% @env_hsh.each_pair do |key, value|  %>
+    <% env_hsh.each_pair do |key, value|  %>
     <env-entry>
-      <env-entry-name><%= key %>-solr/home</env-entry-name>
-      <env-entry-value><%= value %>-/quod-dev/dev/grosscol/solrfed/hydra-jetty-8.1.1/solr</env-entry-value>
+      <env-entry-name><%= key %></env-entry-name>
+      <env-entry-value><%= value %></env-entry-value>
       <env-entry-type>java.lang.String</env-entry-type>
     </env-entry>
     <% end %>
