@@ -21,27 +21,27 @@ require 'fileutils'
 
     before do
       Jettywrapper.reset_config
+      FileUtils.rm "tmp/v8.1.1.zip", force: true
     end
 
     context "downloading" do
       context "with default file" do
         it "should download the zip file" do
-          FileUtils.rm "tmp/v8.1.1.zip", force: true
-          Jettywrapper.should_receive(:system).with('curl -L https://github.com/projecthydra/hydra-jetty/archive/v8.1.1.zip -o tmp/v8.1.1.zip').and_return(system ('true'))
+          Jettywrapper.should_receive(:open).with('https://github.com/projecthydra/hydra-jetty/archive/v8.1.1.zip').and_return(system ('true'))
           Jettywrapper.download
         end
       end
 
       context "specifying the file" do
         it "should download the zip file" do
-          Jettywrapper.should_receive(:system).with('curl -L http://example.co/file.zip -o tmp/file.zip').and_return(system ('true'))
+          Jettywrapper.should_receive(:open).with('http://example.co/file.zip').and_return(system ('true'))
           Jettywrapper.download('http://example.co/file.zip')
           Jettywrapper.url.should == 'http://example.co/file.zip'
         end
       end
       context "specifying the version" do
         it "should download the zip file" do
-          Jettywrapper.should_receive(:system).with('curl -L https://github.com/projecthydra/hydra-jetty/archive/v9.9.9.zip -o tmp/v9.9.9.zip').and_return(system ('true'))
+          Jettywrapper.should_receive(:open).with('https://github.com/projecthydra/hydra-jetty/archive/v9.9.9.zip').and_return(system ('true'))
           Jettywrapper.hydra_jetty_version = 'v9.9.9'
           Jettywrapper.download
         end
@@ -55,10 +55,10 @@ require 'fileutils'
       context "with default file" do
         it "should download the zip file" do
           File.should_receive(:exists?).and_return(true)
-          Jettywrapper.should_receive(:expanded_zip_dir).and_return('tmp/jetty_generator/hydra-jetty-v8.1.1')
-          Jettywrapper.should_receive(:system).with('unzip -d tmp/jetty_generator -qo tmp/v8.1.1.zip').and_return(system ('true'))
-          Jettywrapper.should_receive(:system).with('rm -r jetty').and_return(system ('true'))
-          Jettywrapper.should_receive(:system).with('mv tmp/jetty_generator/hydra-jetty-v8.1.1 jetty').and_return(system ('true'))
+          Jettywrapper.should_receive(:expanded_zip_dir).and_return('tmp/jetty_generator/interal_dir')
+          Zip::File.should_receive(:open).with('tmp/v8.1.1.zip').and_return(true)
+          FileUtils.should_receive(:remove_dir).with('jetty',true).and_return(true)
+          FileUtils.should_receive(:mv).with('tmp/jetty_generator/interal_dir','jetty').and_return(true)
           Jettywrapper.unzip
         end
       end
@@ -70,9 +70,9 @@ require 'fileutils'
         it "should download the zip file" do
           File.should_receive(:exists?).and_return(true)
           Jettywrapper.should_receive(:expanded_zip_dir).and_return('tmp/jetty_generator/interal_dir')
-          Jettywrapper.should_receive(:system).with('unzip -d tmp/jetty_generator -qo tmp/file.zip').and_return(system ('true'))
-          Jettywrapper.should_receive(:system).with('rm -r jetty').and_return(system ('true'))
-          Jettywrapper.should_receive(:system).with('mv tmp/jetty_generator/interal_dir jetty').and_return(system ('true'))
+          Zip::File.should_receive(:open).with('tmp/file.zip').and_return(true)
+          FileUtils.should_receive(:remove_dir).with('jetty',true).and_return(true)
+          FileUtils.should_receive(:mv).with('tmp/jetty_generator/interal_dir','jetty').and_return(true)
           Jettywrapper.unzip
         end
       end

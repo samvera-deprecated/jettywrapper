@@ -31,5 +31,6 @@ Gem::Specification.new do |s|
   s.add_development_dependency 'yard'#, '0.6.5'  # Yard > 0.6.5 won't generate docs.
                                                 # I don't know why & don't have time to 
                                                 # debug it right now
+  s.add_development_dependency 'rubyzip'
 end
 
