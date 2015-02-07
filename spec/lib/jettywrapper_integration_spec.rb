@@ -26,12 +26,12 @@ module Hydra
         ts.start      
         ts.logger.debug "Jetty started from rspec at #{ts.pid}"
         pid_from_file = File.open( ts.pid_path ) { |f| f.gets.to_i }
-        ts.pid.should eql(pid_from_file)
+        expect(ts.pid).to eql(pid_from_file)
       
         # Can we connect to solr?
         require 'net/http' 
         response = Net::HTTP.get_response(URI.parse("http://localhost:#{jetty_params[:jetty_port]}/solr/"))
-        response.code.should eql("200")
+        expect(response.code).to eql("200")
         ts.stop
       
       end
@@ -50,8 +50,8 @@ module Hydra
         ts.start
         ts.logger.debug "Jetty started from rspec at #{ts.pid}"
         response = Net::HTTP.get_response(URI.parse("http://localhost:#{jetty_params[:jetty_port]}/solr/"))
-        response.code.should eql("200")
-        lambda { ts.start }.should raise_exception(/Server is already running/)
+        expect(response.code).to eql("200")
+        expect { ts.start }.to raise_exception(/Server is already running/)
         ts.stop
       end
       
@@ -64,11 +64,11 @@ module Hydra
             @s.close
           end
           it "can check to see whether a port is already in use" do
-            Jettywrapper.is_port_in_use?(TEST_JETTY_PORTS.last).should eql(true)
+            expect(Jettywrapper.is_port_in_use?(TEST_JETTY_PORTS.last)).to eql(true)
           end
         end
         it "should be false when nothing is running" do
-          Jettywrapper.is_port_in_use?(TEST_JETTY_PORTS.last).should eql(false)
+          expect(Jettywrapper.is_port_in_use?(TEST_JETTY_PORTS.last)).to eql(false)
         end
       end
       
@@ -80,9 +80,9 @@ module Hydra
         }
         ts = Jettywrapper.configure(jetty_params) 
         ts.stop
-        ts.pid_file?.should eql(false)
+        expect(ts.pid_file?).to eql(false)
         ts.start
-        lambda{ ts.start }.should raise_exception
+        expect{ ts.start }.to raise_exception
         ts.stop
       end
 
@@ -96,8 +96,8 @@ module Hydra
         begin
           ts = Jettywrapper.configure(jetty_params) 
           ts.stop
-          ts.pid_file?.should eql(false)
-          lambda{ ts.start }.should raise_exception
+          expect(ts.pid_file?).to eql(false)
+          expect{ ts.start }.to raise_exception
           ts.stop
         ensure
           socket.close

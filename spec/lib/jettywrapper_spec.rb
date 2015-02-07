@@ -27,21 +27,21 @@ require 'fileutils'
     context "downloading" do
       context "with default file" do
         it "should download the zip file" do
-          Jettywrapper.should_receive(:open).with('https://github.com/projecthydra/hydra-jetty/archive/v8.1.1.zip').and_return(system ('true'))
+          expect(Jettywrapper).to receive(:open).with('https://github.com/projecthydra/hydra-jetty/archive/v8.1.1.zip').and_return(system ('true'))
           Jettywrapper.download
         end
       end
 
       context "specifying the file" do
         it "should download the zip file" do
-          Jettywrapper.should_receive(:open).with('http://example.co/file.zip').and_return(system ('true'))
+          expect(Jettywrapper).to receive(:open).with('http://example.co/file.zip').and_return(system ('true'))
           Jettywrapper.download('http://example.co/file.zip')
-          Jettywrapper.url.should == 'http://example.co/file.zip'
+          expect(Jettywrapper.url).to eq('http://example.co/file.zip')
         end
       end
       context "specifying the version" do
         it "should download the zip file" do
-          Jettywrapper.should_receive(:open).with('https://github.com/projecthydra/hydra-jetty/archive/v9.9.9.zip').and_return(system ('true'))
+          expect(Jettywrapper).to receive(:open).with('https://github.com/projecthydra/hydra-jetty/archive/v9.9.9.zip').and_return(system ('true'))
           Jettywrapper.hydra_jetty_version = 'v9.9.9'
           Jettywrapper.download
         end
@@ -54,11 +54,11 @@ require 'fileutils'
       end
       context "with default file" do
         it "should download the zip file" do
-          File.should_receive(:exists?).and_return(true)
-          Jettywrapper.should_receive(:expanded_zip_dir).and_return('tmp/jetty_generator/interal_dir')
-          Zip::File.should_receive(:open).with('tmp/v8.1.1.zip').and_return(true)
-          FileUtils.should_receive(:remove_dir).with('jetty',true).and_return(true)
-          FileUtils.should_receive(:mv).with('tmp/jetty_generator/interal_dir','jetty').and_return(true)
+          expect(File).to receive(:exists?).and_return(true)
+          expect(Jettywrapper).to receive(:expanded_zip_dir).and_return('tmp/jetty_generator/interal_dir')
+          expect(Zip::File).to receive(:open).with('tmp/v8.1.1.zip').and_return(true)
+          expect(FileUtils).to receive(:remove_dir).with('jetty',true).and_return(true)
+          expect(FileUtils).to receive(:mv).with('tmp/jetty_generator/interal_dir','jetty').and_return(true)
           Jettywrapper.unzip
         end
       end
@@ -68,11 +68,11 @@ require 'fileutils'
           Jettywrapper.url = 'http://example.co/file.zip'
         end
         it "should download the zip file" do
-          File.should_receive(:exists?).and_return(true)
-          Jettywrapper.should_receive(:expanded_zip_dir).and_return('tmp/jetty_generator/interal_dir')
-          Zip::File.should_receive(:open).with('tmp/file.zip').and_return(true)
-          FileUtils.should_receive(:remove_dir).with('jetty',true).and_return(true)
-          FileUtils.should_receive(:mv).with('tmp/jetty_generator/interal_dir','jetty').and_return(true)
+          expect(File).to receive(:exists?).and_return(true)
+          expect(Jettywrapper).to receive(:expanded_zip_dir).and_return('tmp/jetty_generator/interal_dir')
+          expect(Zip::File).to receive(:open).with('tmp/file.zip').and_return(true)
+          expect(FileUtils).to receive(:remove_dir).with('jetty',true).and_return(true)
+          expect(FileUtils).to receive(:mv).with('tmp/jetty_generator/interal_dir','jetty').and_return(true)
           Jettywrapper.unzip
         end
       end
@@ -187,6 +187,7 @@ require 'fileutils'
       it "should be the Rails environment" do
         Rails = double(env: 'test')
         expect(Jettywrapper.env).to eq "test"
+        Rails = nil
       end
 
       it "should use the ENV['RAILS_ENV']" do
@@ -210,58 +211,58 @@ require 'fileutils'
       before do
       end
       it "loads the application jetty.yml first" do
-        IO.should_receive(:read).with('./config/jetty.yml').and_return("default:\n")
+        expect(IO).to receive(:read).with('./config/jetty.yml').and_return("default:\n")
         config = Jettywrapper.load_config
       end
 
       it "loads the application jetty.yml using erb parsing" do
-        IO.should_receive(:read).with('./config/jetty.yml').and_return("default:\n  a: <%= 123 %>")
+        expect(IO).to receive(:read).with('./config/jetty.yml').and_return("default:\n  a: <%= 123 %>")
         config = Jettywrapper.load_config
         config[:a] == 123
       end
 
       it "falls back on the distributed jetty.yml" do
-        File.should_receive(:exists?).with('./config/jetty.yml').and_return(false)
-        IO.should_receive(:read).with { |value| value =~ /jetty.yml/ }.and_return("default:\n")
+        expect(File).to receive(:exists?).with('./config/jetty.yml').and_return(false)
+        expect(IO).to receive(:read).with(/jetty.yml/).and_return("default:\n")
         config = Jettywrapper.load_config
       end
 
       it "supports per-environment configuration" do
         ENV['environment'] = 'test'
-        IO.should_receive(:read).with('./config/jetty.yml').and_return("default:\n  a: 1\ntest:\n  a: 2")
+        expect(IO).to receive(:read).with('./config/jetty.yml').and_return("default:\n  a: 1\ntest:\n  a: 2")
         config = Jettywrapper.load_config
-        config[:a].should == 2
+        expect(config[:a]).to eq(2)
       end
 
       it "should take the env as an argument to load_config and the env should be sticky" do
-        IO.should_receive(:read).with('./config/jetty.yml').and_return("default:\n  a: 1\nfoo:\n  a: 2")
+        expect(IO).to receive(:read).with('./config/jetty.yml').and_return("default:\n  a: 1\nfoo:\n  a: 2")
         config = Jettywrapper.load_config('foo')
-        config[:a].should == 2
+        expect(config[:a]).to eq(2)
         expect(Jettywrapper.env).to eq 'foo'
       end
 
       it "falls back on a 'default' environment configuration" do
         ENV['environment'] = 'test'
-        IO.should_receive(:read).with('./config/jetty.yml').and_return("default:\n  a: 1")
+        expect(IO).to receive(:read).with('./config/jetty.yml').and_return("default:\n  a: 1")
         config = Jettywrapper.load_config
-        config[:a].should == 1
+        expect(config[:a]).to eq(1)
       end
     end
 
     context "instantiation" do
       it "can be instantiated" do
         ts = Jettywrapper.instance
-        ts.class.should eql(Jettywrapper)
+        expect(ts.class).to eql(Jettywrapper)
       end
 
       it "can be configured with a params hash" do
         ts = Jettywrapper.configure(@jetty_params)
-        ts.quiet.should == false
-        ts.jetty_home.should == "/path/to/jetty"
-        ts.port.should == @jetty_params[:jetty_port]
-        ts.solr_home.should == '/path/to/solr'
-        ts.startup_wait.should == 0
-        ts.jetty_opts.should == @jetty_params[:jetty_opts]
+        expect(ts.quiet).to eq(false)
+        expect(ts.jetty_home).to eq("/path/to/jetty")
+        expect(ts.port).to eq(@jetty_params[:jetty_port])
+        expect(ts.solr_home).to eq('/path/to/solr')
+        expect(ts.startup_wait).to eq(0)
+        expect(ts.jetty_opts).to eq(@jetty_params[:jetty_opts])
       end
 
       it "should override nil params with defaults" do
@@ -275,28 +276,28 @@ require 'fileutils'
         }
 
         ts = Jettywrapper.configure(jetty_params)
-        ts.quiet.should == true
-        ts.jetty_home.should == "/path/to/jetty"
-        ts.port.should == 8888
-        ts.solr_home.should == File.join(ts.jetty_home, "solr")
-        ts.startup_wait.should == 5
-        ts.jetty_opts.should == []
+        expect(ts.quiet).to eq(true)
+        expect(ts.jetty_home).to eq("/path/to/jetty")
+        expect(ts.port).to eq(8888)
+        expect(ts.solr_home).to eq(File.join(ts.jetty_home, "solr"))
+        expect(ts.startup_wait).to eq(5)
+        expect(ts.jetty_opts).to eq([])
       end
 
       it "passes all the expected values to jetty during startup" do
         ts = Jettywrapper.configure(@jetty_params)
         command = ts.jetty_command
-        command.should include("-Dsolr.solr.home=#{@jetty_params[:solr_home]}")
-        command.should include("-Djetty.port=#{@jetty_params[:jetty_port]}")
-        command.should include("-Xmx256m")
-        command.should include("start.jar")
-        command.slice(command.index('start.jar')+1, 2).should == @jetty_params[:jetty_opts]
+        expect(command).to include("-Dsolr.solr.home=#{@jetty_params[:solr_home]}")
+        expect(command).to include("-Djetty.port=#{@jetty_params[:jetty_port]}")
+        expect(command).to include("-Xmx256m")
+        expect(command).to include("start.jar")
+        expect(command.slice(command.index('start.jar')+1, 2)).to eq(@jetty_params[:jetty_opts])
       end
 
       it "escapes the :solr_home parameter" do
         ts = Jettywrapper.configure(@jetty_params.merge(:solr_home => '/path with spaces/to/solr'))
         command = ts.jetty_command
-        command.should include("-Dsolr.solr.home=/path\\ with\\ spaces/to/solr")
+        expect(command).to include("-Dsolr.solr.home=/path\\ with\\ spaces/to/solr")
       end
 
       it "has a pid if it has been started" do
@@ -304,10 +305,10 @@ require 'fileutils'
           :jetty_home => '/tmp'
         }
         ts = Jettywrapper.configure(jetty_params)
-        Jettywrapper.any_instance.stub(:process).and_return(double('proc', :start => nil, :pid=>5454))
+        allow_any_instance_of(Jettywrapper).to receive(:process).and_return(double('proc', :start => nil, :pid=>5454))
         ts.stop
         ts.start
-        ts.pid.should eql(5454)
+        expect(ts.pid).to eql(5454)
         ts.stop
       end
 
@@ -317,37 +318,37 @@ require 'fileutils'
         }
         ts = Jettywrapper.configure(jetty_params)
         ts.stop
-        Jettywrapper.any_instance.stub(:process).and_return(double('proc', :start => nil, :pid=>2323))
+        allow_any_instance_of(Jettywrapper).to receive(:process).and_return(double('proc', :start => nil, :pid=>2323))
         swp = Jettywrapper.start(jetty_params)
-        swp.pid.should eql(2323)
-        swp.pid_file.should eql("_tmp_test.pid")
+        expect(swp.pid).to eql(2323)
+        expect(swp.pid_file).to eql("_tmp_test.pid")
         swp.stop
       end
 
       it "can get the status for a given jetty instance" do
         # Don't actually start jetty, just fake it
-        Jettywrapper.any_instance.stub(:process).and_return(double('proc', :start => nil, :pid=>12345))
+        allow_any_instance_of(Jettywrapper).to receive(:process).and_return(double('proc', :start => nil, :pid=>12345))
 
         jetty_params = {
           :jetty_home => File.expand_path("#{File.dirname(__FILE__)}/../../jetty")
         }
         Jettywrapper.stop(jetty_params)
-        Jettywrapper.is_jetty_running?(jetty_params).should eql(false)
+        expect(Jettywrapper.is_jetty_running?(jetty_params)).to eql(false)
         Jettywrapper.start(jetty_params)
-        Jettywrapper.is_jetty_running?(jetty_params).should eql(true)
+        expect(Jettywrapper.is_jetty_running?(jetty_params)).to eql(true)
         Jettywrapper.stop(jetty_params)
       end
 
       it "can get the pid for a given jetty instance" do
         # Don't actually start jetty, just fake it
-        Jettywrapper.any_instance.stub(:process).and_return(double('proc', :start => nil, :pid=>54321))
+        allow_any_instance_of(Jettywrapper).to receive(:process).and_return(double('proc', :start => nil, :pid=>54321))
         jetty_params = {
           :jetty_home => File.expand_path("#{File.dirname(__FILE__)}/../../jetty")
         }
         Jettywrapper.stop(jetty_params)
-        Jettywrapper.pid(jetty_params).should eql(nil)
+        expect(Jettywrapper.pid(jetty_params)).to eql(nil)
         Jettywrapper.start(jetty_params)
-        Jettywrapper.pid(jetty_params).should eql(54321)
+        expect(Jettywrapper.pid(jetty_params)).to eql(54321)
         Jettywrapper.stop(jetty_params)
       end
 
@@ -355,12 +356,12 @@ require 'fileutils'
         jetty_params = {
           :jetty_home => '/tmp', :jetty_port => 8777
         }
-        Jettywrapper.any_instance.stub(:process).and_return(double('proc', :start => nil, :pid=>2323))
+        allow_any_instance_of(Jettywrapper).to receive(:process).and_return(double('proc', :start => nil, :pid=>2323))
         swp = Jettywrapper.start(jetty_params)
-        (File.file? swp.pid_path).should eql(true)
+        expect(File.file? swp.pid_path).to eql(true)
 
         swp = Jettywrapper.stop(jetty_params)
-        (File.file? swp.pid_path).should eql(false)
+        expect(File.file? swp.pid_path).to eql(false)
       end
 
       describe "creates a pid file" do
@@ -368,20 +369,20 @@ require 'fileutils'
         describe "when the environment isn't set" do
           before { ENV['environment'] = nil }
           it "should have the path and env in the name" do
-            ts.pid_file.should eql("_path_to_jetty_development.pid")
+            expect(ts.pid_file).to eql("_path_to_jetty_development.pid")
           end
         end
         describe "when the environment is set" do
           before { ENV['environment'] = 'test' }
           it "should have the path and env in the name" do
-            ts.pid_file.should eql("_path_to_jetty_test.pid")
+            expect(ts.pid_file).to eql("_path_to_jetty_test.pid")
           end
         end
       end
 
       it "knows where its pid file should be written" do
         ts = Jettywrapper.configure(@jetty_params)
-        ts.pid_dir.should eql(File.expand_path("#{ts.base_path}/tmp/pids"))
+        expect(ts.pid_dir).to eql(File.expand_path("#{ts.base_path}/tmp/pids"))
       end
 
       it "writes a pid to a file when it is started" do
@@ -389,14 +390,14 @@ require 'fileutils'
           :jetty_home => '/tmp'
         }
         ts = Jettywrapper.configure(jetty_params)
-        Jettywrapper.any_instance.stub(:process).and_return(double('proc', :start => nil, :pid=>2222))
+        allow_any_instance_of(Jettywrapper).to receive(:process).and_return(double('proc', :start => nil, :pid=>2222))
         ts.stop
-        ts.pid_file?.should eql(false)
+        expect(ts.pid_file?).to eql(false)
         ts.start
-        ts.pid.should eql(2222)
-        ts.pid_file?.should eql(true)
+        expect(ts.pid).to eql(2222)
+        expect(ts.pid_file?).to eql(true)
         pid_from_file = File.open( ts.pid_path ) { |f| f.gets.to_i }
-        pid_from_file.should eql(2222)
+        expect(pid_from_file).to eql(2222)
       end
 
     end # end of instantiation context
@@ -404,38 +405,38 @@ require 'fileutils'
     context "logging" do
       it "has a logger" do
         ts = Jettywrapper.configure(@jetty_params)
-        ts.logger.should be_kind_of(Logger)
+        expect(ts.logger).to be_kind_of(Logger)
       end
 
     end # end of logging context
 
     context "wrapping a task" do
       it "wraps another method" do
-        Jettywrapper.any_instance.stub(:start).and_return(true)
-        Jettywrapper.any_instance.stub(:stop).and_return(true)
+        allow_any_instance_of(Jettywrapper).to receive(:start).and_return(true)
+        allow_any_instance_of(Jettywrapper).to receive(:stop).and_return(true)
         error = Jettywrapper.wrap(@jetty_params) do
         end
-        error.should eql(false)
+        expect(error).to eql(false)
       end
 
       it "configures itself correctly when invoked via the wrap method" do
-        Jettywrapper.any_instance.stub(:start).and_return(true)
-        Jettywrapper.any_instance.stub(:stop).and_return(true)
+        allow_any_instance_of(Jettywrapper).to receive(:start).and_return(true)
+        allow_any_instance_of(Jettywrapper).to receive(:stop).and_return(true)
         error = Jettywrapper.wrap(@jetty_params) do
           ts = Jettywrapper.instance
-          ts.quiet.should == @jetty_params[:quiet]
-          ts.jetty_home.should == "/path/to/jetty"
-          ts.port.should == @jetty_params[:jetty_port]
-          ts.solr_home.should == "/path/to/solr"
-          ts.startup_wait.should == 0
+          expect(ts.quiet).to eq(@jetty_params[:quiet])
+          expect(ts.jetty_home).to eq("/path/to/jetty")
+          expect(ts.port).to eq(@jetty_params[:jetty_port])
+          expect(ts.solr_home).to eq("/path/to/solr")
+          expect(ts.startup_wait).to eq(0)
         end
-        error.should eql(false)
+        expect(error).to eql(false)
       end
 
       it "captures any errors produced" do
-        Jettywrapper.any_instance.stub(:start).and_return(true)
-        Jettywrapper.any_instance.stub(:stop).and_return(true)
-        Jettywrapper.instance.logger.should_receive(:error).with("*** Error starting jetty: this is an expected error message")
+        allow_any_instance_of(Jettywrapper).to receive(:start).and_return(true)
+        allow_any_instance_of(Jettywrapper).to receive(:stop).and_return(true)
+        expect(Jettywrapper.instance.logger).to receive(:error).with("*** Error starting jetty: this is an expected error message")
         expect { error = Jettywrapper.wrap(@jetty_params) do
           raise "this is an expected error message"
         end }.to raise_error "this is an expected error message"
@@ -447,15 +448,15 @@ require 'fileutils'
       it "inherits the current stderr/stdout in 'loud' mode" do
         ts = Jettywrapper.configure(@jetty_params.merge(:quiet => false))
         process = ts.process
-        process.io.stderr.should == $stderr
-        process.io.stdout.should == $stdout
+        expect(process.io.stderr).to eq($stderr)
+        expect(process.io.stdout).to eq($stdout)
       end
 
       it "redirect stderr/stdout to a log file in quiet mode" do
         ts = Jettywrapper.configure(@jetty_params.merge(:quiet => true))
         process = ts.process
-        process.io.stderr.should_not == $stderr
-        process.io.stdout.should_not == $stdout
+        expect(process.io.stderr).not_to eq($stderr)
+        expect(process.io.stdout).not_to eq($stdout)
       end
     end
   end
