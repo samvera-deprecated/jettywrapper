@@ -9,6 +9,8 @@ require 'active_support/core_ext/hash'
 require 'erb'
 require 'yaml'
 require 'logger'
+require 'open-uri'
+require 'zip'
 
 Dir[File.expand_path(File.join(File.dirname(__FILE__),"tasks/*.rake"))].each { |ext| load ext } if defined?(Rake)
 
@@ -31,6 +33,7 @@ class Jettywrapper
   def initialize(params = {})
     self.base_path = self.class.app_root
   end
+
 
   # Methods inside of the class << self block can be called directly on Jettywrapper, as class methods.
   # Methods outside the class << self block must be called on Jettywrapper.instance, as instance methods.
@@ -64,24 +67,43 @@ class Jettywrapper
       self.url = url if url
       logger.info "Downloading jetty at #{self.url} ..."
       FileUtils.mkdir tmp_dir unless File.exists? tmp_dir
-      system "curl -L #{self.url} -o #{zip_file}"
-      abort "Unable to download jetty from #{self.url}" unless $?.success?
+
+      begin
+        open(self.url) do |io|
+          IO.copy_stream(io,zip_file)
+        end
+      rescue Exception => e
+        abort "Unable to download jetty from #{self.url} #{e.message}"
+      end
     end
 
     def unzip
       download unless File.exists? zip_file
       logger.info "Unpacking #{zip_file}..."
       tmp_save_dir = File.join tmp_dir, 'jetty_generator'
-      system "unzip -d #{tmp_save_dir} -qo #{zip_file}"
-      abort "Unable to unzip #{zip_file} into tmp_save_dir/" unless $?.success?
+      begin
+        Zip::File.open(zip_file) do |zip_file|
+          # Handle entries one by one
+          zip_file.each do |entry|
+            dest_file = File.join(tmp_save_dir,entry.name)
+            FileUtils.remove_entry(dest_file,true)
+            entry.extract(dest_file)
+          end
+        end
+      rescue Exception => e
+        abort "Unable to unzip #{zip_file} into tmp_save_dir/ #{e.message}"
+      end
 
       # Remove the old jetty directory if it exists
-      system "rm -r #{jetty_dir}" if File.directory?(jetty_dir)
+      FileUtils.remove_dir(jetty_dir,true)
 
       # Move the expanded zip file into the final destination.
       expanded_dir = expanded_zip_dir(tmp_save_dir)
-      system "mv #{expanded_dir} #{jetty_dir}"
-      abort "Unable to move #{expanded_dir} into #{jetty_dir}/" unless $?.success?
+      begin
+        FileUtils.mv(expanded_dir, jetty_dir)
+      rescue Exception => e
+        abort "Unable to move #{expanded_dir} into #{jetty_dir}/ #{e.message}"
+      end
     end
 
     def expanded_zip_dir(tmp_save_dir)
@@ -91,7 +113,7 @@ class Jettywrapper
     end
 
     def clean
-      system "rm -rf #{jetty_dir}"
+      FileUtils.remove_dir(jetty_dir,true)
       unzip
     end
 
