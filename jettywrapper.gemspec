@@ -23,12 +23,12 @@ Gem::Specification.new do |s|
   s.add_dependency "childprocess"
   s.add_dependency "i18n"
   s.add_dependency "activesupport", ">=3.0.0"
+  s.add_dependency 'rubyzip'
 
   s.add_development_dependency "rspec", '~> 3.2'
   s.add_development_dependency "rspec-its"
   s.add_development_dependency 'rake'
 
   s.add_development_dependency 'yard'
-  s.add_development_dependency 'rubyzip'
 end
 
