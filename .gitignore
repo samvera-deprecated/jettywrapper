@@ -13,3 +13,4 @@ tmp/
 jettywrapper.log
 jetty
 bundle
+*.sess
