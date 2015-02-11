@@ -21,13 +21,13 @@ require 'fileutils'
 
     before do
       Jettywrapper.reset_config
-      FileUtils.rm "tmp/v8.1.1.zip", force: true
+      FileUtils.rm "tmp/master.zip", force: true
     end
 
     context "downloading" do
       context "with default file" do
         it "should download the zip file" do
-          expect(Jettywrapper).to receive(:open).with('https://github.com/projecthydra/hydra-jetty/archive/v8.1.1.zip').and_return(system ('true'))
+          expect(Jettywrapper).to receive(:open).with('https://github.com/projecthydra/hydra-jetty/archive/master.zip').and_return(system ('true'))
           Jettywrapper.download
         end
       end
@@ -56,7 +56,7 @@ require 'fileutils'
         it "should download the zip file" do
           expect(File).to receive(:exists?).and_return(true)
           expect(Jettywrapper).to receive(:expanded_zip_dir).and_return('tmp/jetty_generator/interal_dir')
-          expect(Zip::File).to receive(:open).with('tmp/v8.1.1.zip').and_return(true)
+          expect(Zip::File).to receive(:open).with('tmp/master.zip').and_return(true)
           expect(FileUtils).to receive(:remove_dir).with('jetty',true).and_return(true)
           expect(FileUtils).to receive(:mv).with('tmp/jetty_generator/interal_dir','jetty').and_return(true)
           Jettywrapper.unzip
@@ -99,7 +99,7 @@ require 'fileutils'
         its(:url) {should == 'http://example.com/bar.zip'}
       end
       context "when url is not set" do
-        its(:url) {should == 'https://github.com/projecthydra/hydra-jetty/archive/v8.1.1.zip'}
+        its(:url) {should == 'https://github.com/projecthydra/hydra-jetty/archive/master.zip'}
       end
     end
 

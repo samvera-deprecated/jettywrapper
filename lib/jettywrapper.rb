@@ -42,7 +42,7 @@ class Jettywrapper
     attr_writer :hydra_jetty_version, :url, :tmp_dir, :jetty_dir, :env
 
     def hydra_jetty_version
-      @hydra_jetty_version ||= 'v8.1.1'
+      @hydra_jetty_version ||= 'master'
     end
 
     def url
