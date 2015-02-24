@@ -10,7 +10,8 @@ namespace :umich do
   end
 
   desc "Wipe the umich directory and copy in fresh contents."
-  task :clean do
+  task :clean => :environment do
+    UMichwrapper.stop(UMICH_CONFIG)
     UMichwrapper.clean
   end
   
