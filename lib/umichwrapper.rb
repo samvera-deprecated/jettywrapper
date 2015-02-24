@@ -1,11 +1,7 @@
 require 'singleton'
 require 'fileutils'
-require 'shellwords'
 require 'socket'
 require 'timeout'
-require 'childprocess'
-require 'active_support/benchmarkable'
-require 'active_support/core_ext/hash'
 require 'erb'
 require 'yaml'
 require 'logger'
@@ -62,13 +58,17 @@ class UMichwrapper
       download 
       logger.info "Retrieving fresh solr and fedora..."
 
-      if File.directory?(umich_dir)
-        abort "Unable to copy into #{umich_dir}. Directory already exists."
-      end
-
       # Copy the clean source dir into the project destination.
       expanded_dir = File.join(loc,"hydra-jetty-#{hydra_jetty_version}")
-      FileUtils.cp_r(expanded_dir, umich_dir)
+
+      # Copy contents of expanded_dir into umich_dir
+      if Dir.exist? umich_dir
+        Dir.glob( File.join( expanded_dir, '*') ).each do |src|
+          FileUtils.cp_r(src, umich_dir)
+        end
+      else
+        FileUtils.cp_r(expanded_dir, umich_dir)
+      end
 
       # Check that the web apps directories exist, and rename them to the custom war names
       exploded_solr_war   = File.join(umich_dir, "webapps", "uniquename.solr.war")
@@ -83,17 +83,24 @@ class UMichwrapper
       # Generate jboss-web.xml to customize solr and fedora applications for deployment.
       logger.info "Generating jboss-web.xml deployment descriptor..."
 
-      solr_home = File.expande("umich/solr")
-      fcrepo_home = File.expand("umich/fcrepo")
-      fedora_jboss_xml = generate_jboss_web( {"fcrepo/home" => "/path/to/project/fcrepo"} )
-      solr_jboss_xml   = generate_jboss_web( {"solr/home" => "/path/to/project/solr"} )
+      solr_home = File.expand_path("umich/solr/development-core")
+      fcrepo_home = File.expand_path("umich/fcrepo-data")
+      fedora_jboss_xml = generate_jboss_web("fedora", {"fcrepo/home" => fcrepo_home, "fcrepo.home" => fcrepo_home} )
+      solr_jboss_xml   = generate_jboss_web("solr",  {"solr/home" => solr_home} )
       File.open( File.join(custom_fedora_war,"WEB-INF", "jboss-web.xml"), "w"){ |f| f.puts fedora_jboss_xml }
       File.open( File.join(custom_solr_war  ,"WEB-INF", "jboss-web.xml"), "w"){ |f| f.puts solr_jboss_xml }
+
+      # Change permissiosn on solr home such that jboss/torquebox can read and write to it
+      FileUtils.chmod_R( 0766, solr_home )
+
+      # Make directory for fedora repo data
+      FileUtils.mkdir fcrepo_home
+      FileUtils.chmod( 0766, fcrepo_home )
       
     end
 
     # Generate the jboss-web xml
-    def generate_jboss_web( env_hsh )
+    def generate_jboss_web( app_name = 'demo', env_hsh  )
       template_path = File.expand_path( "../umichwrapper/jboss-web.xml.erb", __FILE__ )
       template = ERB.new( File.read(template_path))
       xml_content = template.result(binding)
@@ -111,7 +118,7 @@ class UMichwrapper
 
     def clean
       # Remove the old umich directory if it exists
-      FileUtils.rm_r umich_dir if File.directory?(umich_dir)
+      FileUtils.rm_rf umich_dir if File.directory?(umich_dir)
       # Copy fresh contents from source
       unzip
     end
@@ -401,9 +408,9 @@ class UMichwrapper
     
     # Deploy Solr and Fedora, but don't over-write
     logger.debug "Deploying Solr & Fedora."
-
     deploy_two_war
 
+    # Deploy ruby application via yaml torquebox descriptor
     logger.debug "Deploying application using the following parameters: "
     logger.debug "app_name: #{app_name}"
     logger.debug "deploy_dir: #{deploy_dir}"
@@ -444,17 +451,20 @@ class UMichwrapper
   def deploy_two_war(clobber=false)
     solr_war_name = "#{ENV['USER']}.solr.war"
     solr_war_src = File.join("umich","webapps", solr_war_name)
-    solr_war_dest = File.join (self.deploy_dir, solr_war_name)
 
     fed_war_name = "#{ENV['USER']}.fedora.war"
     fed_war_src = File.join("umich","webapps", fed_war_name)
-    fed_war_dest = File.join (self.deploy_dir, fed_war_name)
 
-    logger.debug("Copying #{solr_war_src} to #{solr_war_dest}")
-    FileUtils.cp_r( solr_war_src, solr_war_dest )
+    logger.debug("Copying #{solr_war_src} into #{self.deploy_dir}")
+    FileUtils.cp_r( solr_war_src, self.deploy_dir )
 
-    logger.debug("Copying #{fed_war_src} to #{fed_war_dest}")
-    FileUtils.cp_r( fed_war_src, fed_war_dest )
+    logger.debug("Copying #{fed_war_src} into #{self.deploy_dir}")
+    FileUtils.cp_r( fed_war_src, self.deploy_dir )
+
+    # Touch the .dodeploy files to manually signal to jboss to deploy the apps in the directory
+    FileUtils.touch( "#{File.join(self.deploy_dir, solr_war_name)}.dodeploy" )
+    FileUtils.touch( "#{File.join(self.deploy_dir, fed_war_name)}.dodeploy" )
+
   end
 
   def deploy_yaml(clobber=false)
@@ -479,6 +489,16 @@ class UMichwrapper
       puts "Found & removed #{p}"
     end
   end
+
+  def undeploy_two_wars
+    fed_deploy_marker = File.join( self.deploy_dir, "#{ENV['USER']}.fedora.war.deployed")
+    solr_deploy_marker = File.join( self.deploy_dir, "#{ENV['USER']}.solr.war.deployed")
+
+    # Remove deployed marker to signal to jboss to undeploy the applications.
+    FileUtils.rm(fed_deploy_marker) if File.exist? fed_deploy_marker
+    FileUtils.rm(solr_deploy_marker) if File.exist? solr_deploy_marker
+  end
+
 
   # Wait for the jetty server to start and begin listening for requests
   def startup_wait!
@@ -510,6 +530,10 @@ class UMichwrapper
     logger.debug "app_name: #{app_name}"
     logger.debug "deploy_dir: #{deploy_dir}"
     undeploy_yaml
+
+    # Undeploy solr and fedora
+    logger.debug "Un-deploying solr and fedora"
+    undeploy_two_wars
 
   end
 end
