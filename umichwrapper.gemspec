@@ -24,6 +24,7 @@ Gem::Specification.new do |s|
   s.add_dependency "i18n"
   s.add_dependency "activesupport", ">=3.0.0"
   s.add_dependency "torquebox-rake-support"
+  s.add_dependency "typhoeus"
   
   s.add_development_dependency "rspec", '~> 2.99'
   s.add_development_dependency "rspec-its"
