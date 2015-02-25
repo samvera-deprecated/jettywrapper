@@ -1,19 +1,15 @@
 require 'singleton'
 require 'fileutils'
-require 'shellwords'
-require 'socket'
 require 'timeout'
-require 'childprocess'
-require 'active_support/benchmarkable'
-require 'active_support/core_ext/hash'
 require 'erb'
 require 'yaml'
 require 'logger'
+require 'typhoeus'
 
 Dir[File.expand_path(File.join(File.dirname(__FILE__),"tasks/*.rake"))].each { |ext| load ext } if defined?(Rake)
 
 
-# UMichwrapper is a Singleton class, so you can only create one jetty instance at a time.
+# UMichwrapper is a Singleton class, so you can only create one instance at a time.
 class UMichwrapper
 
   include Singleton
@@ -30,6 +26,9 @@ class UMichwrapper
   attr_accessor :fedora_url
   attr_accessor :app_name
   attr_accessor :deploy_dir
+  attr_accessor :fedora_base
+  attr_accessor :fedora_url
+
   attr_accessor :base_path
 
   # configure the singleton with some defaults
@@ -84,6 +83,7 @@ class UMichwrapper
 
     def load_config(config_name = env() )
       @env = config_name
+      puts "Load config.  @env = #{@env}."
       umich_file = "#{app_root}/config/umich.yml"
 
       unless File.exists?(umich_file)
@@ -126,8 +126,8 @@ class UMichwrapper
     #   :fedora_host
     #   :fedora_port
     #
-    #   :fedora_url the user specific url against which requests will resolve
-    #   :solr_url   the user specific url against which requests will resolve
+    #   :fedora_url the user specific url which will have test|dev appended.
+    #   :solr_url   the user specific url which will have test|dev appended.
     #
     #   :startup_wait How many seconds to wait before starting tests. Deployment may take a while.
     def configure(params)
@@ -142,12 +142,15 @@ class UMichwrapper
       tupac.torq_home = params[:torq_home] || "/l/local/torquebox"
       
       tupac.solr_url   = params[:solr_url]   || "#{tupac.solr_host}:#{tupac.solr_port}/solr/#{ENV['USER']}" 
-      tupac.fedora_url = params[:fedora_url] || "#{tupac.fedora_host}:#{tupac.fedora_port}/fcrepo/#{ENV['USER']}/dev" 
 
       tupac.startup_wait = params[:startup_wait] || 5
 
+      # Derived Parameters
       tupac.app_name   = params[:app_name]   || File.basename( tupac.base_path )
       tupac.deploy_dir = params[:deploy_dir] || File.join( tupac.torq_home, "deployments" )
+      tupac.fedora_base = params[:fedora_base] || "#{ENV['USER']}/#{tupac.app_name}"
+      tupac.solr_base = params[:fedora_base] || "hydra-solr/#{ENV['USER']}/#{tupac.app_name}"
+      tupac.fedora_url = "#{tupac.fedora_host}:#{tupac.fedora_port}/#{fedora_base}"
 
       return tupac
     end
@@ -165,6 +168,8 @@ class UMichwrapper
       puts "#{tupac.startup_wait}"
       puts "#{tupac.app_name}"
       puts "#{tupac.deploy_dir}"
+      puts "#{tupac.fedora_base}"
+      puts "#{tupac.fedora_url}"
       puts "#{UMichwrapper.app_root}"
     end
 
@@ -319,21 +324,39 @@ class UMichwrapper
     return false
   end
 
-  # Start the jetty server. Check the pid file to see if it is running already,
-  # and stop it if so. After you start jetty, write the PID to a file.
+  def deploy_solr()
+    #https://cwiki.apache.org/confluence/display/solr/Collections+API
+    #e.g.
+    #http://localhost:8983/solr/admin/collections?action=CREATE&name=newCollection&numShards=2&replicationFactor=1
+    # /admin/collections?action=CREATE: create a collection
+    # /admin/collections?action=RELOAD: reload a collection
+    # /admin/collections?action=DELETE: delete a collection
+    Typhoeus.post("www.example.com/posts", body: { title: "test post", content: "this is my test"})
+
+  end
+
+  def deploy_fedora()
+
+  end
+
+
   # This is the instance start method. It must be called on UMichwrapper.instance
   # You're probably better off using UMichwrapper.start()
   # @example
   #    UMichwrapper.configure(params)
   #    UMichwrapper.instance.start
   #    return UMichwrapper.instance
+  # Make sure that Solr and Fedora cores and nodes are in order.
   def start
-    app_name = File.basename(self.base_path)
+    app_name = self.app_name
     deploy_dir = File.join( self.torq_home, "deployments" )
 
     logger.debug "Deploying application using the following parameters: "
     logger.debug "app_name: #{app_name}"
     logger.debug "deploy_dir: #{deploy_dir}"
+
+    deploy_solr
+    deploy_fedora
 
     # Check to see if we can start.
     # 0. Torquebox deployments exists and is writable.
