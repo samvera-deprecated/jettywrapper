@@ -16,19 +16,11 @@ class UMichwrapper
   include ActiveSupport::Benchmarkable
 
   attr_accessor :startup_wait # How many seconds to wait for jetty to spin up. Default is 5.
-  attr_accessor :solr_home
-  attr_accessor :solr_host
-  attr_accessor :solr_port
-  attr_accessor :fedora_host
-  attr_accessor :fedora_port
+  attr_accessor :solr_home, :solr_host, :solr_port, :solr_cntx, :solr_app_url
+  attr_accessor :fedora_host, :fedora_port, :fedora_cntx, :fedora_app_url
   attr_accessor :torq_home
-  attr_accessor :solr_url
-  attr_accessor :fedora_url
   attr_accessor :app_name
   attr_accessor :deploy_dir
-  attr_accessor :fedora_base
-  attr_accessor :fedora_url
-
   attr_accessor :base_path
 
   # configure the singleton with some defaults
@@ -119,7 +111,6 @@ class UMichwrapper
     # @param [Hash<Symbol>] params
     #   :torq_home is the root directory of torquebox.
     #
-    #   :solr_home is the root directory of the user's solr collection.
     #   :solr_host is the name of the server on which solr is running.
     #   :solr_port is the port number on which solr is listening.
     #
@@ -141,36 +132,37 @@ class UMichwrapper
       tupac.fedora_port = params[:fedora_port] || 8080
       tupac.torq_home = params[:torq_home] || "/l/local/torquebox"
       
-      tupac.solr_url   = params[:solr_url]   || "#{tupac.solr_host}:#{tupac.solr_port}/solr/#{ENV['USER']}" 
-
       tupac.startup_wait = params[:startup_wait] || 5
 
       # Derived Parameters
       tupac.app_name   = params[:app_name]   || File.basename( tupac.base_path )
       tupac.deploy_dir = params[:deploy_dir] || File.join( tupac.torq_home, "deployments" )
-      tupac.fedora_base = params[:fedora_base] || "#{ENV['USER']}/#{tupac.app_name}"
-      tupac.solr_base = params[:fedora_base] || "hydra-solr/#{ENV['USER']}/#{tupac.app_name}"
-      tupac.fedora_url = "#{tupac.fedora_host}:#{tupac.fedora_port}/#{fedora_base}"
+      tupac.fedora_cntx = params[:fedora_cntx] || "fcrepo"
+      tupac.solr_cntx = params[:solr_cntx] || "hydra-solr"
+      tupac.fedora_app_url = "#{tupac.fedora_host}:#{tupac.fedora_port}/#{tupac.fedora_cntx}/#{ENV['USER']}/#{tupac.app_name}"
+      tupac.solr_app_url   = "#{tupac.solr_host}:#{tupac.solr_port}/#{tupac.solr_cntx}/#{ENV['USER']}-#{tupac.app_name}" 
 
       return tupac
     end
 
     def print_config(params = {})
       tupac = configure( params )
-      puts "#{tupac.solr_home}"
-      puts "#{tupac.solr_host}"
-      puts "#{tupac.solr_port}"
-      puts "#{tupac.fedora_host}"
-      puts "#{tupac.fedora_port}"
-      puts "#{tupac.torq_home}"
-      puts "#{tupac.solr_url  }"
-      puts "#{tupac.fedora_url}"
-      puts "#{tupac.startup_wait}"
-      puts "#{tupac.app_name}"
-      puts "#{tupac.deploy_dir}"
-      puts "#{tupac.fedora_base}"
-      puts "#{tupac.fedora_url}"
-      puts "#{UMichwrapper.app_root}"
+      puts "solr_home:      #{tupac.solr_home}"
+      puts "solr_host:      #{tupac.solr_host}"
+      puts "solr_port:      #{tupac.solr_port}"
+      puts "solr_cntx:      #{tupac.solr_cntx}"
+      puts "solr_app_url:   #{tupac.solr_app_url}"
+      puts "--"
+      puts "fedora_host:    #{tupac.fedora_host}"
+      puts "fedora_port:    #{tupac.fedora_port}"
+      puts "fedora_cntx:    #{tupac.fedora_cntx}"
+      puts "fedora_app_url: #{tupac.fedora_app_url}"
+      puts "--"
+      puts "torq_home:      #{tupac.torq_home}"
+      puts "startup_wait:   #{tupac.startup_wait}"
+      puts "app_name:       #{tupac.app_name}"
+      puts "deploy_dir:     #{tupac.deploy_dir}"
+      puts "UMichwrapper.app_root: #{UMichwrapper.app_root}"
     end
 
     # Wrap the tests. Startup jetty, yield to the test task, capture any errors, shutdown
@@ -331,7 +323,7 @@ class UMichwrapper
     # /admin/collections?action=CREATE: create a collection
     # /admin/collections?action=RELOAD: reload a collection
     # /admin/collections?action=DELETE: delete a collection
-    Typhoeus.post("www.example.com/posts", body: { title: "test post", content: "this is my test"})
+    Typhoeus.post("www.example.com/posts", body: { action: "CREATE", name: "CollectionName", numShards: "1", replicationFactor: "1"})
 
   end
 
