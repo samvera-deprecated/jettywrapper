@@ -1,0 +1,5 @@
+development:
+  startup_wait: 15
+
+testing:
+  startup_wait: 9
