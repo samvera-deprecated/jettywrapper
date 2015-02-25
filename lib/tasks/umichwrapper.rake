@@ -2,8 +2,6 @@
 require 'yaml'
 
 namespace :umich do
-  JETTY_DIR = 'jetty'
-
   desc "Empty fedora node and solr index."
   task :clean do
     UMichwrapper.clean
