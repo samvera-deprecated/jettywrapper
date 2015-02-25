@@ -66,6 +66,8 @@ The tomcat context fragment approach might work for torquebox which is dependant
 
   **There doesn't appear to be an equivalent place or functionality in JBoss/Wildfly to use context fragments. There does not appear to be any external configuration of this sort supported in JBoss.  Shame.**
 
+Jboss has something called "overlays" which permit replacing/modifying the content of an archive with an external file at deploy time.  This requires the use of their CLI, so it is a non-starter. See: https://docs.jboss.org/author/display/AS72/Deployment+Overlays
+
 
 ### Exploded Solr WAR deployment (*Possible Solution*)
 
