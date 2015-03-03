@@ -3,8 +3,8 @@ require 'yaml'
 
 namespace :umich do
   desc "Empty fedora node and solr index."
-  task :clean do
-    UMichwrapper.clean
+  task :clean => :environment do
+    UMichwrapper.clean(UMICH_CONFIG)
   end
   
   desc "Return the status of application."

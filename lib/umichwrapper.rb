@@ -3,6 +3,7 @@ require 'fileutils'
 require 'timeout'
 require 'erb'
 require 'yaml'
+require 'json'
 require 'logger'
 require 'typhoeus'
 
@@ -76,7 +77,7 @@ class UMichwrapper
 
     def load_config(config_name = env() )
       @env = config_name
-      puts "Load config.  @env = #{@env}."
+      logger.info "Load config.  @env = #{@env}."
       umich_file = "#{app_root}/config/umich.yml"
 
       unless File.exists?(umich_file)
@@ -140,7 +141,7 @@ class UMichwrapper
       tupac.deploy_dir = params[:deploy_dir] || File.join( tupac.torq_home, "deployments" )
       tupac.fedora_cntx = params[:fedora_cntx] || "fcrepo"
       tupac.solr_cntx = params[:solr_cntx] || "hydra-solr"
-      tupac.solr_admin_url   = "#{tupac.solr_host}:#{tupac.solr_port}/admin" 
+      tupac.solr_admin_url   = "#{tupac.solr_host}:#{tupac.solr_port}/#{tupac.solr_cntx}/admin" 
       tupac.fedora_app_url = "#{tupac.fedora_host}:#{tupac.fedora_port}/#{tupac.fedora_cntx}/#{ENV['USER']}/#{tupac.app_name}"
       tupac.solr_app_url   = "#{tupac.solr_host}:#{tupac.solr_port}/#{tupac.solr_cntx}/#{ENV['USER']}-#{tupac.app_name}" 
 
@@ -165,6 +166,8 @@ class UMichwrapper
       puts "app_name:       #{tupac.app_name}"
       puts "deploy_dir:     #{tupac.deploy_dir}"
       puts "UMichwrapper.app_root: #{UMichwrapper.app_root}"
+      puts "-- Cores Status --"
+      tupac.core_status.each{|core, info| puts "#{info["instanceDir"]} :: #{core}"}
     end
 
     # Convenience method for configuring and starting jetty with one command
@@ -173,7 +176,17 @@ class UMichwrapper
     #    UMichwrapper.start(:jetty_home => '/path/to/jetty', :jetty_port => '8983')
     def start(params)
       UMichwrapper.configure(params)
-      UMichwrapper.instance.start
+      UMichwrapper.instance.add_core("dev")
+      UMichwrapper.instance.add_core("test")
+      UMichwrapper.instance.deploy_app
+      return UMichwrapper.instance
+    end
+
+    def clean(params)
+      UMichwrapper.configure(params)
+      UMichwrapper.instance.del_core("dev")
+      UMichwrapper.instance.del_core("test")
+      UMichwrapper.instance.stop
       return UMichwrapper.instance
     end
 
@@ -206,97 +219,105 @@ class UMichwrapper
       return ["deployed","undeployed","failed",""]
     end
 
-    def core_status
-      vars = {
-        action: "STATUS", 
-        wt: "json"}
-
-      target_url = "#{self.solr_admin_url}/cores"
-      resp = Typhoeus.get(target_url, params: vars)
-      
-      body = JSON.parse!(resp.response_body)
-
-      # Array of two elements [name string, info hash]
-      return body["status"]
-    end
-
-    def del_core(corename = "dev")
-      # API call to unload core with Solr instance.
-      vars = {
-        action: "UNLOAD",
-        core: corename,
-        wt: "json"}
-
-      target_url = "#{self.solr_admin_url}/cores"
-      resp = Typhoeus.get(target_url, params: vars)
-
-      body = JSON.parse!(resp.response_body)
-      puts "Unload core response:"
-      puts body
-
-      # Remove core directory from file system
-      core_inst_dir = File.join( SOLR_HOME, ENV['USER'], corename )
-
-      FileUtils.rm_rf( core_inst_dir )
-    end
-
-    def add_core(corename = "dev")
-      # Get core instance dir for user/project
-      core_inst_dir = File.join( self.solr_home, ENV['USER'], corename )
-
-      # Check if core already exists
-      cs = core_status
-      instance_dirs =  cs.collect{ |arr| arr[1]["instanceDir"] }
-
-      # Short circut if core already exists in Solr instance.
-      if instance_dirs.include? core_inst_dir
-        puts "#{ENV['USER']} #{corename} core already exists."
-        return
-      end
-
-      # Create core_inst_dir directory on the file system.
-
-      # File operation to copy dir and files from template
-      # Check for solr_cores/corename template in current directory
-      if Dir.exist? File.join("solr_coresn", corename)
-        puts "Using project solr_cores template."
-        src  = File.join("solr_cores", corename)
-      else
-        puts "Using default template."
-        src  = File.join( File.expand_path("../../solr_cores", __FILE__), corename )
-      end
-      
-      dest = File.dirname(core_inst_dir)
-      puts "fr: #{src}\nto:#{dest}"
-      FileUtils.cp_r(src, dest)
-
-      # Make the core_inst_dir 777
-      FileUtils.chmod_R( 0777, core_inst_dir )
-
-
-      # API call to register new core with Solr instance.
-      # Sometimes core discovery is flakey, so ignore an error response here.
-      vars = {
-        action: "CREATE",
-        name: corename,
-        instanceDir: core_inst_dir,
-        wt: "json"}
-
-      target_url = "#{self.solr_admin_url}/cores"
-      resp = Typhoeus.get(target_url, params: vars)
-
-      body = JSON.parse!(resp.response_body)
-      puts "Add cores response:"
-      puts body
-    end
-
-    # Querying the admin url should get you a redirect to hydra-solr/#
-    def solr_running?
-      resp = Typhoeus.get(self.solr_admin_url)
-      return resp.response_code == 301
-    end
 
   end #end of class << self
+
+  def core_status
+    vars = {
+      action: "STATUS", 
+      wt: "json"}
+
+    target_url = "#{self.solr_admin_url}/cores"
+    resp = Typhoeus.get(target_url, params: vars)
+    
+    body = JSON.parse!(resp.response_body)
+
+    # Array of two elements [name string, info hash]
+    return body["status"]
+  end
+
+  def del_core(corename = "dev")
+    # API call to unload core with Solr instance.
+    vars = {
+      action: "UNLOAD",
+      core: corename,
+      wt: "json"}
+
+    target_url = "#{self.solr_admin_url}/cores"
+    resp = Typhoeus.get(target_url, params: vars)
+
+    body = JSON.parse!(resp.response_body)
+    if body["error"]
+      logger.warn body["error"]
+    else
+      logger.info "Core [#{corename}] unloaded."
+    end
+
+    # Remove core directory from file system
+    core_inst_dir = File.join( self.solr_home, ENV['USER'], corename )
+
+    FileUtils.rm_rf( core_inst_dir )
+  end
+
+  def add_core(corename = "dev")
+    # Get core instance dir for user/project
+    core_inst_dir = File.join( self.solr_home, ENV['USER'], corename )
+
+    # Check if core already exists
+    cs = core_status
+    instance_dirs =  cs.collect{ |arr| arr[1]["instanceDir"] }
+
+    # Short circut if core already exists in Solr instance.
+    if instance_dirs.include? core_inst_dir
+      puts "#{ENV['USER']} #{corename} core already exists."
+      return
+    end
+
+    # Create core_inst_dir directory on the file system.
+
+    # File operation to copy dir and files from template
+    # Check for solr_cores/corename template in current directory
+    if Dir.exist? File.join("solr_coresn", corename)
+      logger.info "Using project solr_cores template."
+      src  = File.join("solr_cores", corename)
+    else
+      logger.info "Using default solr_cores template."
+      src  = File.join( File.expand_path("../../solr_cores", __FILE__), corename )
+    end
+    
+    dest = File.dirname(core_inst_dir)
+    FileUtils.cp_r(src, dest)
+    logger.info "Core template: #{src}"
+    logger.info "Core instance: #{dest}"
+
+    # Make the core_inst_dir 777
+    FileUtils.chmod_R( 0777, core_inst_dir )
+
+
+    # API call to register new core with Solr instance.
+    # Sometimes core discovery is flakey, so ignore an error response here.
+    vars = {
+      action: "CREATE",
+      name: corename,
+      instanceDir: core_inst_dir,
+      wt: "json"}
+
+    target_url = "#{self.solr_admin_url}/cores"
+    resp = Typhoeus.get(target_url, params: vars)
+
+    body = JSON.parse!(resp.response_body)
+    if body["error"]
+      logger.warn body["error"]
+    else
+      logger.info "Core [#{corename}] added."
+    end
+  end
+
+  # Querying the admin url should get you a redirect to hydra-solr/#
+  def solr_running?
+    resp = Typhoeus.get(self.solr_admin_url)
+    return resp.response_code == 301
+  end
 
   def logger
     self.class.logger
@@ -318,28 +339,6 @@ class UMichwrapper
     return false
   end
 
-
-  def deploy_solr()
-    admin_url = "#{self.solr_url}/admin"
-
-    #https://cwiki.apache.org/confluence/display/solr/Collections+API
-    #e.g.
-    #http://localhost:8983/solr/admin/collections?action=CREATE&name=newCollection&numShards=2&replicationFactor=1
-    # /admin/collections?action=CREATE: create a collection
-    # /admin/collections?action=RELOAD: reload a collection
-    # /admin/collections?action=DELETE: delete a collection
-    # /admin/collections?action=LIST
-
-    # Check if dev core already exists for developer/project
-
-    #http://localhost:8080/solr/admin/collections?action=LIST&wt=json
-    # Check if Collection already exists.
-    Typhoeus.post("#{admin_url}/collections", body: { action: "CREATE", name: "CollectionName", numShards: "1", replicationFactor: "1", wt: "json"})
-    
-    # Typhoeus.post("www.example.com/posts", body: { action: "CREATE", name: "CollectionName", numShards: "1", replicationFactor: "1", wt: "json"})
-
-  end
-
   def deploy_fedora()
 
   end
@@ -352,16 +351,13 @@ class UMichwrapper
   #    UMichwrapper.instance.start
   #    return UMichwrapper.instance
   # Make sure that Solr and Fedora cores and nodes are in order.
-  def start
+  def deploy_app
     app_name = self.app_name
     deploy_dir = File.join( self.torq_home, "deployments" )
 
     logger.debug "Deploying application using the following parameters: "
     logger.debug "app_name: #{app_name}"
     logger.debug "deploy_dir: #{deploy_dir}"
-
-    deploy_solr
-    deploy_fedora
 
     # Check to see if we can start.
     # 0. Torquebox deployments exists and is writable.
@@ -417,7 +413,7 @@ class UMichwrapper
 
     Dir.glob("#{knob_file_path}*") do |p|
       File.delete(p)
-      puts "Found & removed #{p}"
+      logger.info "Found & removed #{p}"
     end
   end
 
