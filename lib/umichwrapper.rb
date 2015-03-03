@@ -165,45 +165,6 @@ class UMichwrapper
       puts "UMichwrapper.app_root: #{UMichwrapper.app_root}"
     end
 
-    # Wrap the tests. Startup jetty, yield to the test task, capture any errors, shutdown
-    # jetty, and return the error.
-    # @example Using this method in a rake task
-    #   require 'jettywrapper'
-    #   desc "Spin up jetty and run tests against it"
-    #   task :newtest do
-    #     jetty_params = {
-    #       :jetty_home => "/path/to/jetty",
-    #       :quiet => false,
-    #       :jetty_port => 8983,
-    #       :startup_wait => 30,
-    #       :jetty_opts => "/etc/jetty.xml"
-    #     }
-    #     error = UMichwrapper.wrap(jetty_params) do
-    #       Rake::Task["rake:spec"].invoke
-    #       Rake::Task["rake:cucumber"].invoke
-    #     end
-    #     raise "test failures: #{error}" if error
-    #   end
-    def wrap(params)
-      error = false
-      jetty_server = self.configure(params)
-
-      begin
-        jetty_server.start
-        yield
-      rescue
-        error = $!
-        logger.error "*** Error starting jetty: #{error}"
-      ensure
-        # puts "stopping jetty server"
-        jetty_server.stop
-      end
-
-      raise error if error
-
-      return error
-    end
-
     # Convenience method for configuring and starting jetty with one command
     # @param [Hash] params: The configuration to use for starting jetty
     # @example
@@ -227,55 +188,6 @@ class UMichwrapper
        return UMichwrapper.instance
     end
 
-    # Determine whether the jetty at the given jetty_home is running
-    # @param [Hash] params: :jetty_home is required. Which jetty do you want to check the status of?
-    # @return [Boolean]
-    # @example
-    #    UMichwrapper.is_jetty_running?(:jetty_home => '/path/to/jetty')
-    def is_jetty_running?(params)
-      UMichwrapper.configure(params)
-      pid = UMichwrapper.instance.pid
-      return false unless pid
-      true
-    end
-
-    # Return the pid of the specified jetty, or return nil if it isn't running
-    # @param [Hash] params: :jetty_home is required.
-    # @return [Fixnum] or [nil]
-    # @example
-    #    UMichwrapper.pid(:jetty_home => '/path/to/jetty')
-    def pid(params)
-      UMichwrapper.configure(params)
-      pid = UMichwrapper.instance.pid
-      return nil unless pid
-      pid
-    end
-
-    # Check to see if the port is open so we can raise an error if we have a conflict
-    # @param [Fixnum] port the port to check
-    # @return [Boolean]
-    # @example
-    #  UMichwrapper.is_port_open?(8983)
-    def is_port_in_use?(port)
-      begin
-        Timeout::timeout(1) do
-          begin
-            s = TCPSocket.new('127.0.0.1', port)
-            s.close
-            return true
-          rescue Errno::ECONNREFUSED, Errno::EHOSTUNREACH
-            return false
-          rescue
-            return false
-          end
-        end
-      rescue Timeout::Error
-      end
-
-      return false
-    end
-
-
     def logger=(logger)
       @@logger = logger
     end
@@ -291,8 +203,6 @@ class UMichwrapper
       UMichwrapper.configure(params)
       return ["deployed","undeployed","failed",""]
     end
-
-
 
   end #end of class << self
 
@@ -316,14 +226,25 @@ class UMichwrapper
     return false
   end
 
+
   def deploy_solr()
+    admin_url = "#{self.solr_url}/admin"
+
     #https://cwiki.apache.org/confluence/display/solr/Collections+API
     #e.g.
     #http://localhost:8983/solr/admin/collections?action=CREATE&name=newCollection&numShards=2&replicationFactor=1
     # /admin/collections?action=CREATE: create a collection
     # /admin/collections?action=RELOAD: reload a collection
     # /admin/collections?action=DELETE: delete a collection
-    Typhoeus.post("www.example.com/posts", body: { action: "CREATE", name: "CollectionName", numShards: "1", replicationFactor: "1"})
+    # /admin/collections?action=LIST
+
+    # Check if dev core already exists for developer/project
+
+    #http://localhost:8080/solr/admin/collections?action=LIST&wt=json
+    # Check if Collection already exists.
+    Typhoeus.post("#{admin_url}/collections", body: { action: "CREATE", name: "CollectionName", numShards: "1", replicationFactor: "1", wt: "json"})
+    
+    # Typhoeus.post("www.example.com/posts", body: { action: "CREATE", name: "CollectionName", numShards: "1", replicationFactor: "1", wt: "json"})
 
   end
 
