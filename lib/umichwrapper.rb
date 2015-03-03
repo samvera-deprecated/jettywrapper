@@ -290,10 +290,6 @@ class UMichwrapper
     logger.info "Core template: #{src}"
     logger.info "Core instance: #{dest}"
 
-    # Make the core_inst_dir 777
-    FileUtils.chmod_R( 0777, core_inst_dir )
-
-
     # API call to register new core with Solr instance.
     # Sometimes core discovery is flakey, so ignore an error response here.
     vars = {
