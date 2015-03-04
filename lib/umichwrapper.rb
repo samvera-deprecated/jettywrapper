@@ -17,8 +17,8 @@ class UMichwrapper
   include ActiveSupport::Benchmarkable
 
   attr_accessor :startup_wait # How many seconds to wait for jetty to spin up. Default is 5.
-  attr_accessor :solr_home, :solr_host, :solr_port, :solr_cntx, :solr_app_url
-  attr_accessor :fedora_host, :fedora_port, :fedora_cntx, :fedora_app_url
+  attr_accessor :solr_home, :solr_host, :solr_port, :solr_cntx 
+  attr_accessor :fedora_host, :fedora_port, :fedora_cntx 
   attr_accessor :solr_admin_url
   attr_accessor :torq_home
   attr_accessor :app_name
@@ -142,8 +142,7 @@ class UMichwrapper
       tupac.fedora_cntx = params[:fedora_cntx] || "fcrepo"
       tupac.solr_cntx = params[:solr_cntx] || "hydra-solr"
       tupac.solr_admin_url   = "#{tupac.solr_host}:#{tupac.solr_port}/#{tupac.solr_cntx}/admin" 
-      tupac.fedora_app_url = "#{tupac.fedora_host}:#{tupac.fedora_port}/#{tupac.fedora_cntx}/#{ENV['USER']}/#{tupac.app_name}"
-      tupac.solr_app_url   = "#{tupac.solr_host}:#{tupac.solr_port}/#{tupac.solr_cntx}/#{ENV['USER']}-#{tupac.app_name}" 
+      tupac.fedora_rest_url   = "#{tupac.fedora_host}:#{tupac.fedora_port}/#{tupac.fedora_cntx}/rest" 
 
       return tupac
     end
@@ -154,20 +153,20 @@ class UMichwrapper
       puts "solr_host:      #{tupac.solr_host}"
       puts "solr_port:      #{tupac.solr_port}"
       puts "solr_cntx:      #{tupac.solr_cntx}"
-      puts "solr_app_url:   #{tupac.solr_app_url}"
       puts "--"
       puts "fedora_host:    #{tupac.fedora_host}"
       puts "fedora_port:    #{tupac.fedora_port}"
       puts "fedora_cntx:    #{tupac.fedora_cntx}"
-      puts "fedora_app_url: #{tupac.fedora_app_url}"
       puts "--"
       puts "torq_home:      #{tupac.torq_home}"
       puts "startup_wait:   #{tupac.startup_wait}"
       puts "app_name:       #{tupac.app_name}"
       puts "deploy_dir:     #{tupac.deploy_dir}"
       puts "UMichwrapper.app_root: #{UMichwrapper.app_root}"
-      puts "-- Cores Status --"
+      puts "-- Cores --"
       tupac.core_status.each{|core, info| puts "#{info["instanceDir"]} :: #{core}"}
+      puts "-- Nodes --"
+      tupac.node_childs.each{|c| puts "#{c["@id"]}" }
     end
 
     # Convenience method for configuring and starting jetty with one command
@@ -178,6 +177,8 @@ class UMichwrapper
       UMichwrapper.configure(params)
       UMichwrapper.instance.add_core("dev")
       UMichwrapper.instance.add_core("test")
+      UMichwrapper.instance.add_node("dev")
+      UMichwrapper.instance.add_node("test")
       UMichwrapper.instance.deploy_app
       return UMichwrapper.instance
     end
@@ -186,6 +187,8 @@ class UMichwrapper
       UMichwrapper.configure(params)
       UMichwrapper.instance.del_core("dev")
       UMichwrapper.instance.del_core("test")
+      UMichwrapper.instance.del_node("dev")
+      UMichwrapper.instance.del_node("test")
       UMichwrapper.instance.stop
       return UMichwrapper.instance
     end
@@ -315,6 +318,60 @@ class UMichwrapper
     return resp.response_code == 301
   end
 
+  # Add fedora node
+  def add_node(node_name="dev")
+    # Create the node
+    heads = { 'Content-Type' => "text/plain" }
+    target_url = "#{self.fedora_rest_url}/#{ENV["USER"]}/#{node_name}"
+    
+    resp = Typhoeus.put(target_url, headers: heads)
+
+    logger.info "Add node [#{node_name}] response: #{resp.response_code}."
+  end
+
+  # Delete fedora node
+  def del_node(node_name="dev")
+    # Delete the node
+    heads = { 'Content-Type' => "text/plain" }
+    target_url = "#{self.fedora_rest_url}/#{ENV["USER"]}/#{node_name}"
+    
+    resp = Typhoeus.delete(target_url, headers: heads)
+
+    # 204 for success 404 for already deleted
+    logger.info "Delete node [#{node_name}] response code: #{resp.response_code}. "
+
+    # Delete tombstone
+    target_url = "#{self.fedora_rest_url}/#{ENV["USER"]}/#{node_name}/fcr:tombstone"
+    resp = Typhoeus.delete(target_url, headers: heads)
+
+    # 204 for success. 404 for already deleted.
+    logger.info "Delete tombstone for [#{node_name}] response code: #{resp.response_code}. "
+  end
+
+  # Check if fedora node exists
+  def node_exists?(node_name="dev")
+    heads = { 'Content-Type' => "text/plain" }
+    target_url = "#{self.fedora_rest_url}/#{ENV["USER"]}/#{node_name}"
+    
+    resp = Typhoeus.get(target_url, headers: heads)
+
+    return resp.response_code == 200
+  end
+
+  def node_childs()
+    heads = { 'Accept' => "application/ld+json" }
+    target_url = "#{self.fedora_rest_url}/#{ENV["USER"]}"
+    
+    resp = Typhoeus.get(target_url, headers: heads)
+    
+    # Return -1 children if root node does not exist
+    return [] unless resp.response_code != 200
+
+    body = JSON.parse! resp.response_body 
+
+    childs = body[1]["http://www.w3.org/ns/ldp#contains"] || []
+  end
+
   def logger
     self.class.logger
   end
@@ -334,11 +391,6 @@ class UMichwrapper
 
     return false
   end
-
-  def deploy_fedora()
-
-  end
-
 
   # This is the instance start method. It must be called on UMichwrapper.instance
   # You're probably better off using UMichwrapper.start()
