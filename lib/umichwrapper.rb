@@ -6,6 +6,8 @@ require 'yaml'
 require 'json'
 require 'logger'
 require 'typhoeus'
+require 'active_support/core_ext/hash'
+
 
 Dir[File.expand_path(File.join(File.dirname(__FILE__),"tasks/*.rake"))].each { |ext| load ext } if defined?(Rake)
 
@@ -14,12 +16,12 @@ Dir[File.expand_path(File.join(File.dirname(__FILE__),"tasks/*.rake"))].each { |
 class UMichwrapper
 
   include Singleton
-  include ActiveSupport::Benchmarkable
 
   attr_accessor :startup_wait # How many seconds to wait for jetty to spin up. Default is 5.
   attr_accessor :solr_home, :solr_host, :solr_port, :solr_cntx 
   attr_accessor :fedora_host, :fedora_port, :fedora_cntx 
   attr_accessor :solr_admin_url
+  attr_accessor :fedora_rest_url
   attr_accessor :torq_home
   attr_accessor :app_name
   attr_accessor :deploy_dir
@@ -139,7 +141,7 @@ class UMichwrapper
       # Derived Parameters
       tupac.app_name   = params[:app_name]   || File.basename( tupac.base_path )
       tupac.deploy_dir = params[:deploy_dir] || File.join( tupac.torq_home, "deployments" )
-      tupac.fedora_cntx = params[:fedora_cntx] || "fcrepo"
+      tupac.fedora_cntx = params[:fedora_cntx] || "fedora"
       tupac.solr_cntx = params[:solr_cntx] || "hydra-solr"
       tupac.solr_admin_url   = "#{tupac.solr_host}:#{tupac.solr_port}/#{tupac.solr_cntx}/admin" 
       tupac.fedora_rest_url   = "#{tupac.fedora_host}:#{tupac.fedora_port}/#{tupac.fedora_cntx}/rest" 
@@ -162,7 +164,9 @@ class UMichwrapper
       puts "startup_wait:   #{tupac.startup_wait}"
       puts "app_name:       #{tupac.app_name}"
       puts "deploy_dir:     #{tupac.deploy_dir}"
-      puts "UMichwrapper.app_root: #{UMichwrapper.app_root}"
+      puts "app_root:       #{UMichwrapper.app_root}"
+      puts "-- Application --"
+      puts "app deployed:   #{tupac.is_deployed?}"
       puts "-- Cores --"
       tupac.core_status.each{|core, info| puts "#{info["instanceDir"]} :: #{core}"}
       puts "-- Nodes --"
@@ -291,7 +295,7 @@ class UMichwrapper
     dest = File.dirname(core_inst_dir)
     FileUtils.cp_r(src, dest)
     logger.info "Core template: #{src}"
-    logger.info "Core instance: #{dest}"
+    logger.info "Core instance: #{dest}/#{corename}"
 
     # API call to register new core with Solr instance.
     # Sometimes core discovery is flakey, so ignore an error response here.
@@ -364,12 +368,14 @@ class UMichwrapper
     
     resp = Typhoeus.get(target_url, headers: heads)
     
-    # Return -1 children if root node does not exist
-    return [] unless resp.response_code != 200
+    # Return an empty array if request was not successful.
+    if resp.response_code != 200
+      return []
+    end
 
+    # Parse the body of the response for ldp#contains, or return an empty array
     body = JSON.parse! resp.response_body 
-
-    childs = body[1]["http://www.w3.org/ns/ldp#contains"] || []
+    return body[1]["http://www.w3.org/ns/ldp#contains"] || []
   end
 
   def logger
@@ -378,18 +384,12 @@ class UMichwrapper
 
   # Check to see if the application is deployed.
   def is_deployed?(params = {})
-    ddir = self.deploy_dir
-    appn = self.app_name
-
-    if !File.exists? ddir
-      raise("Torquebox deployment dir does not exist: #{ddir}")
+    if !File.exists? self.deploy_dir
+      raise("Torquebox deployment dir does not exist: #{self.deploy_dir}")
     end
 
-    if File.exist? File.join(ddir, "#{appn}-knob.yml.deployed")
-      return true
-    end
-
-    return false
+    knob_path = File.join(self.deploy_dir, "#{ENV['USER']}-#{self.app_name}-knob.yml.deployed")
+    return File.exist? knob_path
   end
 
   # This is the instance start method. It must be called on UMichwrapper.instance
@@ -404,8 +404,8 @@ class UMichwrapper
     deploy_dir = File.join( self.torq_home, "deployments" )
 
     logger.debug "Deploying application using the following parameters: "
-    logger.debug "app_name: #{app_name}"
-    logger.debug "deploy_dir: #{deploy_dir}"
+    logger.debug "  app_name: #{app_name}"
+    logger.debug "  deploy_dir: #{deploy_dir}"
 
     # Check to see if we can start.
     # 0. Torquebox deployments exists and is writable.
@@ -467,13 +467,20 @@ class UMichwrapper
 
   # Wait for the jetty server to start and begin listening for requests
   def startup_wait!
+    count = 0
+    logger.info "Waiting for application to deploy..."
     begin
     Timeout::timeout(self.startup_wait) do
-      sleep 1 until (is_deployed?)
+      while is_deployed? == false do
+        count = count + 1
+        sleep 1
+      end
     end
     rescue Timeout::Error
       logger.warn "App not deployed after #{self.startup_wait} seconds. Continuing anyway."
     end
+
+    logger.info "App deployed after #{count} seconds."
   end
 
   # Instance stop method. Must be called on UMichwrapper.instance
