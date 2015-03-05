@@ -1,11 +1,11 @@
 development:
-  startup_wait: 15
+  startup_wait: 48
   solr_host: localhost
   solr_port: 8080
   solr_home: /quod-dev/idx/h/hydra-solr
   solr_cntx: hydra-solr
 
 testing:
-  startup_wait: 9
+  startup_wait: 29
   solr_home: /quod-dev/idx/h/hydra-solr
   solr_cntx: hydra-solr
