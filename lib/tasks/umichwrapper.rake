@@ -2,18 +2,12 @@
 require 'yaml'
 
 namespace :umich do
-  desc "Empty fedora node and solr index."
+  desc "Stop application, empty fedora node, and delete solr core."
   task :clean => :environment do
     UMichwrapper.clean(UMICH_CONFIG)
   end
   
-  desc "Return the status of application."
-  task :status => :environment do
-    status = UMichwrapper.status(UMICH_CONFIG)
-    puts "Applications status: #{status}"
-  end
-  
-  desc "Start application."
+  desc "Start application after creating fedora node and solr cores."
   task :start => :environment do
     UMichwrapper.start(UMICH_CONFIG)
   end
@@ -36,11 +30,10 @@ namespace :umich do
     end
   end
 
-  desc "Print the environment config."
-  task :penv => :environment do
-    UMichwrapper.print_config(UMICH_CONFIG)
+  desc "Print the app status and environment config."
+  task :status => :environment do
+    UMichwrapper.print_status(UMICH_CONFIG)
   end
-
 
 end
 

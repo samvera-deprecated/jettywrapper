@@ -22,6 +22,7 @@ class UMichwrapper
   attr_accessor :fedora_host, :fedora_port, :fedora_cntx 
   attr_accessor :solr_admin_url
   attr_accessor :fedora_rest_url
+  attr_accessor :solr_core_name, :fedora_node_path
   attr_accessor :torq_home
   attr_accessor :app_name
   attr_accessor :deploy_dir
@@ -83,7 +84,7 @@ class UMichwrapper
       umich_file = "#{app_root}/config/umich.yml"
 
       unless File.exists?(umich_file)
-        logger.warn "Did not find umichwrapper config file at #{umich_file}. Using default file instead."
+        logger.warn "Did not find umichwrapper config file #{umich_file}. Using default file instead."
         umich_file = File.expand_path("../config/umich.yml", File.dirname(__FILE__))
       end
 
@@ -129,13 +130,13 @@ class UMichwrapper
       params ||= {}
       tupac = self.instance
 
+      # Params with required defaults
       tupac.solr_home = params[:solr_home] || "/l/local/solr/#{ENV['USER']}"
       tupac.solr_host = params[:solr_host] || "localhost"
       tupac.solr_port = params[:solr_port] || 8080
       tupac.fedora_host = params[:fedora_host] || "localhost"
       tupac.fedora_port = params[:fedora_port] || 8080
       tupac.torq_home = params[:torq_home] || "/l/local/torquebox"
-      
       tupac.startup_wait = params[:startup_wait] || 5
 
       # Derived Parameters
@@ -146,10 +147,14 @@ class UMichwrapper
       tupac.solr_admin_url   = "#{tupac.solr_host}:#{tupac.solr_port}/#{tupac.solr_cntx}/admin" 
       tupac.fedora_rest_url   = "#{tupac.fedora_host}:#{tupac.fedora_port}/#{tupac.fedora_cntx}/rest" 
 
+      # Params without required defaults.
+      tupac.solr_core_name = params[:solr_core_name]
+      tupac.fedora_node_path = params[:fedora_node_path]
+      
       return tupac
     end
 
-    def print_config(params = {})
+    def print_status(params = {})
       tupac = configure( params )
       puts "solr_home:      #{tupac.solr_home}"
       puts "solr_host:      #{tupac.solr_host}"
@@ -179,8 +184,7 @@ class UMichwrapper
     #    UMichwrapper.start(:jetty_home => '/path/to/jetty', :jetty_port => '8983')
     def start(params)
       UMichwrapper.configure(params)
-      UMichwrapper.instance.add_core("dev")
-      UMichwrapper.instance.add_core("test")
+      UMichwrapper.instance.add_core
       UMichwrapper.instance.add_node("dev")
       UMichwrapper.instance.add_node("test")
       UMichwrapper.instance.deploy_app
@@ -189,8 +193,7 @@ class UMichwrapper
 
     def clean(params)
       UMichwrapper.configure(params)
-      UMichwrapper.instance.del_core("dev")
-      UMichwrapper.instance.del_core("test")
+      UMichwrapper.instance.del_core
       UMichwrapper.instance.del_node("dev")
       UMichwrapper.instance.del_node("test")
       UMichwrapper.instance.stop
@@ -220,13 +223,6 @@ class UMichwrapper
       @@logger ||= defined?(::Rails) && Rails.logger ? ::Rails.logger : ::Logger.new(STDOUT)
     end
 
-    
-    def status(params)
-      UMichwrapper.configure(params)
-      return ["deployed","undeployed","failed",""]
-    end
-
-
   end #end of class << self
 
   def core_status
@@ -243,7 +239,7 @@ class UMichwrapper
     return body["status"]
   end
 
-  def del_core(corename = "dev")
+  def del_core
     # API call to unload core with Solr instance.
     vars = {
       action: "UNLOAD",
@@ -262,21 +258,53 @@ class UMichwrapper
 
     # Remove core directory from file system
     core_inst_dir = File.join( self.solr_home, ENV['USER'], corename )
+    logger.info "Deleting dir: #{core_inst_dir}"
 
     FileUtils.rm_rf( core_inst_dir )
   end
 
-  def add_core(corename = "dev")
+  def corename
+    # If solr_core_name is specified, use that.
+    if self.solr_core_name
+      return self.solr_core_name
+    end
+
+    # Otherwise, consult the environment
+    case UMichwrapper.env
+    when /^dev(elopment)?/i
+      name = "dev"
+    when /^test(ing)?/i
+      name = "test"
+    else
+      name = 'default'
+    end
+
+    return "#{ENV['USER']}-#{name}"
+  end
+
+  def template_corename
+    case UMichwrapper.env
+    when /^dev(elopment)?/i
+      name = "dev"
+    when /^test(ing)?/i
+      name = "test"
+    else
+      name = 'default'
+    end
+    return name
+  end
+
+  def add_core()
     # Get core instance dir for user/project
     core_inst_dir = File.join( self.solr_home, ENV['USER'], corename )
 
     # Check if core already exists
     cs = core_status
-    instance_dirs =  cs.collect{ |arr| arr[1]["instanceDir"] }
+    instance_dirs =  cs.collect{ |arr| arr[1]["instanceDir"].chop }
 
     # Short circut if core already exists in Solr instance.
     if instance_dirs.include? core_inst_dir
-      puts "#{ENV['USER']} #{corename} core already exists."
+      logger.info "Core #{ENV['USER']} #{corename} alerady exists."
       return
     end
 
@@ -284,18 +312,18 @@ class UMichwrapper
 
     # File operation to copy dir and files from template
     # Check for solr_cores/corename template in current directory
-    if Dir.exist? File.join("solr_coresn", corename)
+    if Dir.exist? File.join("solr_coresn", template_corename)
       logger.info "Using project solr_cores template."
-      src  = File.join("solr_cores", corename)
+      src  = File.join("solr_cores", template_corename)
     else
       logger.info "Using default solr_cores template."
-      src  = File.join( File.expand_path("../../solr_cores", __FILE__), corename )
+      src  = File.join( File.expand_path("../../solr_cores", __FILE__), template_corename )
     end
     
-    dest = File.dirname(core_inst_dir)
-    FileUtils.cp_r(src, dest)
+    # Copy contents of template source to core instance directory
+    FileUtils.cp_r(src, core_inst_dir)
     logger.info "Core template: #{src}"
-    logger.info "Core instance: #{dest}/#{corename}"
+    logger.info "Core instance: #{core_inst_dir}"
 
     # API call to register new core with Solr instance.
     # Sometimes core discovery is flakey, so ignore an error response here.
@@ -411,7 +439,7 @@ class UMichwrapper
     # 0. Torquebox deployments exists and is writable.
     # 1. If a .deployed file exists, app is already deployed.
     if is_deployed?
-      puts "Application already deployed."
+      logger.info "Application already deployed."
       return
     end
 
