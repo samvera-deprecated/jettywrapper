@@ -41,3 +41,12 @@ This has been tested with the Dive into Hydra tutorial.
     2. Edit the Gemfile and add the umichwrapper entry as detailed above.
     3. Run bundle install --path .bundle (bundler suggests vendor/bundle)
 
+  * Add `gem 'slop', '< 4.0.0.0'` to the gemfile as slop 4.0 requires ruby 2.0
+  * Add `gem 'devise'` to the gemfile to avoid a problem with the blacklight generator trying to call bundle
+
+Running `rails generate hydra:install` barfs during the `generate blacklight:install` phase.
+Errors about "Could not find 'bundler'" and then a number of other gems.  Seems this generator is unable to run bundle install.
+Run bundle install again.
+Re-run rails g hydra:install
+  gets to a question about overwritting blacklight-initializers.rb.  Answering either 'y','n', or 'q' results in the process hanging.
+
