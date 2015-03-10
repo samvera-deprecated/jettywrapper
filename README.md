@@ -48,5 +48,11 @@ Running `rails generate hydra:install` barfs during the `generate blacklight:ins
 Errors about "Could not find 'bundler'" and then a number of other gems.  Seems this generator is unable to run bundle install.
 Run bundle install again.
 Re-run rails g hydra:install
-  gets to a question about overwritting blacklight-initializers.rb.  Answering either 'y','n', or 'q' results in the process hanging.
+  gets to a question about overwritting blacklight-initializers.rb.  Answering either 'a', 'y', 'n', or 'q' results in the process hanging.
 
+```
+gem 'umichwrapper', github: 'grosscol/umichwrapper', branch: 'master'
+gem 'slop', '< 4.0.0'
+gem 'devise'
+gem 'hydra', '9.0.0'
+```
