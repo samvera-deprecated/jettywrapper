@@ -23,13 +23,13 @@ testing:
 
 ## Use
 
-Add the UMichwrapper github repo to your project's Gemfile
+Adding the UMichwrapper github repo to your rails project's Gemfile and using bundle install should make the umich tasks available to rake.
 
 ```
 # UMichwrapper
 gem 'umichwrapper', github: 'grosscol/umichwrapper', branch: 'master'
-```
-
+``` 
+Verify umich tasks are available with `bundle exec rake --tasks`
 
 ## Notes
 
@@ -40,22 +40,27 @@ gem 'umichwrapper', github: 'grosscol/umichwrapper', branch: 'master'
 
 ## Dive into Hydra idiosyncracies
 
- * In order to start a dive-into-hydra project
+ * In order to start a dive-into-hydra project:
    1. Use `rails new <project name> --skip-bundle` otherwise you'll be prompted for you sudo pw 
    2. Change directory into your project dir.
-   3. Make additions to the Gemfile:
+   3. Make the additions to the Gemfile (see below for copy/pastable)
      * add hydra dependency.
      * add & pin slop gem to less than version 4.0
+     * add umichwrapper depenency.
      * add preemptive dependencies to work around a bundler related issue.
    4. Run `bundle install --path=.bundle` (bundler suggests vendor/bundle)
    5. Run `rails generate hydra:install` 
+   6. Update solr.yml and fedora.yml
 
-Additions to your project's gemfile:
+ * Additions to your project's gemfile:
 ```
 # Primary Hydra Dependency
 gem 'hydra', '9.0.0'
 # Pin slop to 3.x series for ruby 1.9.3 (jruby) compatibility
 gem 'slop', '< 4.0'
+
+# UMichwrapper
+gem 'umichwrapper', github: 'grosscol/umichwrapper', branch: 'master'
 
 # Preemptively require gems so that rails generate hydra:install will complete.
 #   This is a vendorized gems issue with Bundle.with_clean_env
