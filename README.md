@@ -38,21 +38,34 @@ This does not yet read from solr.yml and fedora.yml in your project config.  How
 This has been tested with the Dive into Hydra tutorial.
   * Use `rails new <project name> --skip-bundle` otherwise you'll be prompted for you sudo pw 
     1. Change directories into your project dir.
-    2. Edit the Gemfile and add the umichwrapper entry as detailed above.
+    2. Make additions to the Gemfile.
+      * add hydra dependency.
+      * add some preemptive dependencies to work around a bundler related issue.
     3. Run bundle install --path .bundle (bundler suggests vendor/bundle)
 
-  * Add `gem 'slop', '< 4.0.0.0'` to the gemfile as slop 4.0 requires ruby 2.0
-  * Add `gem 'devise'` to the gemfile to avoid a problem with the blacklight generator trying to call bundle
-
-Running `rails generate hydra:install` barfs during the `generate blacklight:install` phase.
-Errors about "Could not find 'bundler'" and then a number of other gems.  Seems this generator is unable to run bundle install.
-Run bundle install again.
-Re-run rails g hydra:install
-  gets to a question about overwritting blacklight-initializers.rb.  Answering either 'a', 'y', 'n', or 'q' results in the process hanging.
-
+Additions to the gemfile:
 ```
-gem 'umichwrapper', github: 'grosscol/umichwrapper', branch: 'master'
-gem 'slop', '< 4.0.0'
-gem 'devise'
+# Primary Hydra Dependency
 gem 'hydra', '9.0.0'
+# Pin slop to 3.x series for ruby 1.9.3 (jruby) compatibility
+gem 'slop', '< 4.0'
+
+# Preemptively require gems so that rails generate hydra:install will complete.
+#   This is a vendorized gems issue with Bundle.with_clean_env
+gem 'orm_adapter'
+gem 'responders'
+gem 'warden'
+gem 'devise'
+gem 'devise-guests', '~> 0.3'
+gem 'bcrypt'
+gem 'thread-safe'
 ```
+
+If the gems are not installed preemptively, running `rails generate hydra:install` barfs during the `generate blacklight:install` phase with errors about gems not being found.
+
+On Jruby, you cannot re-run `rails g hydra:install`.  The file conflict resolution will hang indefinitely as it's relying on Open3.  Using c ruby as a viable rescue for this scenario.
+
+Errors about "Could not find gem 'bundler'" can be ignored so long as you have already installed the gems that the call to bundle install from the generator would have installed.  It appears that this is a result of Bundle.with_clean_env being called from within a second tier Bundle environment (ENV -> Bundle -> Bundle).
+
+## Dive into Hydra idiosyncracies
+
