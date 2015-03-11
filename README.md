@@ -33,17 +33,24 @@ gem 'umichwrapper', github: 'grosscol/umichwrapper', branch: 'master'
 
 ## Notes
 
-This does not yet read from solr.yml and fedora.yml in your project config.  However, those do need to point to the corresponding solr and fedora instance/context.  Currently keeping these both configured is on the developer.  Having the UMichwrapper read the solr and fedora configs of your project is next on the list to be implemented.
+ * This gem does not yet read from solr.yml and fedora.yml in your project config.  However, those do need to point to the corresponding solr and fedora instance/context.  Currently keeping these both configured is on the developer.  Having the UMichwrapper read the solr and fedora configs of your project is next on the list to be implemented.
+ * This gem has not been tested with the Dive into Hydra tutorial.
+ * The unit and integration tests have yet to be completed. 
+ * This gem does not yet support facilitating testing in the same way that jettywrapper does.
 
-This has been tested with the Dive into Hydra tutorial.
-  * Use `rails new <project name> --skip-bundle` otherwise you'll be prompted for you sudo pw 
-    1. Change directories into your project dir.
-    2. Make additions to the Gemfile.
-      * add hydra dependency.
-      * add some preemptive dependencies to work around a bundler related issue.
-    3. Run bundle install --path .bundle (bundler suggests vendor/bundle)
+## Dive into Hydra idiosyncracies
 
-Additions to the gemfile:
+ * In order to start a dive-into-hydra project
+   1. Use `rails new <project name> --skip-bundle` otherwise you'll be prompted for you sudo pw 
+   2. Change directory into your project dir.
+   3. Make additions to the Gemfile:
+     * add hydra dependency.
+     * add & pin slop gem to less than version 4.0
+     * add preemptive dependencies to work around a bundler related issue.
+   4. Run `bundle install --path=.bundle` (bundler suggests vendor/bundle)
+   5. Run `rails generate hydra:install` 
+
+Additions to your project's gemfile:
 ```
 # Primary Hydra Dependency
 gem 'hydra', '9.0.0'
@@ -61,11 +68,10 @@ gem 'bcrypt'
 gem 'thread-safe'
 ```
 
-If the gems are not installed preemptively, running `rails generate hydra:install` barfs during the `generate blacklight:install` phase with errors about gems not being found.
+ * If the gems are not installed preemptively, running `rails generate hydra:install` barfs during the `generate blacklight:install` phase with errors about gems not being found.
 
-On Jruby, you cannot re-run `rails g hydra:install`.  The file conflict resolution will hang indefinitely as it's relying on Open3.  Using c ruby as a viable rescue for this scenario.
+ * On Jruby, you cannot re-run `rails g hydra:install`.  The file conflict resolution will hang indefinitely as it's relying on Open3.  Using c ruby as a viable rescue for this scenario.
 
-Errors about "Could not find gem 'bundler'" can be ignored so long as you have already installed the gems that the call to bundle install from the generator would have installed.  It appears that this is a result of Bundle.with_clean_env being called from within a second tier Bundle environment (ENV -> Bundle -> Bundle).
+ * Errors during rails generate about "Could not find gem 'bundler'" can be ignored so long as you have already installed the gems that the call to bundle install from the generator would have installed.  It appears that this is a result of Bundle.with_clean_env being called from within a second tier Bundle environment (ENV -> Bundle -> Bundle).
 
-## Dive into Hydra idiosyncracies
 
