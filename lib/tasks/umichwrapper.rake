@@ -1,10 +1,27 @@
 require 'yaml'
+require 'warbler'
 
 ## These tasks get loaded into the host application when umichwrapper is required
 namespace :umich do
   desc "Stop application, empty fedora node, and delete solr core."
   task :clean => :environment do
     UMichwrapper.clean(UMICH_CONFIG)
+  end
+
+  desc "Build war file."
+  task :build do
+    # copy config/warble if doesn't exist
+    local_config = File.join 'config', 'warble.rb'
+    if File.exist?(local_config ) == false
+      puts "--- Needs a config/warble.rb"
+      src = File.join File.expand_path( '../../../config',__FILE__), 'warble.rb'
+      puts "Src  exists? #{File.exist? src}. #{src}"
+      puts "Src: #{src}\nDst:#{local_config}"
+      FileUtils.copy_file( src, local_config )
+    end
+
+    # shell out to warbler
+    puts %x{warble}
   end
 
   desc "Start application after creating fedora node and solr cores."
