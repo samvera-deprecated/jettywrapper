@@ -1,5 +1,4 @@
 require 'yaml'
-require 'warbler'
 
 ## These tasks get loaded into the host application when umichwrapper is required
 namespace :umich do
