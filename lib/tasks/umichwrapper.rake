@@ -1,12 +1,13 @@
-## These tasks get loaded into the host application when umichwrapper is required
 require 'yaml'
+require 'warbler'
 
+## These tasks get loaded into the host application when umichwrapper is required
 namespace :umich do
   desc "Stop application, empty fedora node, and delete solr core."
   task :clean => :environment do
     UMichwrapper.clean(UMICH_CONFIG)
   end
-  
+
   desc "Start application after creating fedora node and solr cores."
   task :start => :environment do
     UMichwrapper.start(UMICH_CONFIG)
