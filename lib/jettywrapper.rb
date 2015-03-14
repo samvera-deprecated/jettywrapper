@@ -9,6 +9,7 @@ require 'erb'
 require 'yaml'
 require 'logger'
 require 'open-uri'
+require 'tempfile'
 require 'zip'
 
 Dir[File.expand_path(File.join(File.dirname(__FILE__),"tasks/*.rake"))].each { |ext| load ext } if defined?(Rake)
@@ -26,6 +27,7 @@ class Jettywrapper
   attr_accessor :base_path    # The root of the application. Used for determining where log files and PID files should go.
   attr_accessor :java_opts    # Options to pass to java (ex. ["-Xmx512mb", "-Xms128mb"])
   attr_accessor :java_command # Path to the Java executable
+  attr_accessor :java_version # Minimum java version
   attr_accessor :jetty_opts   # Options to pass to jetty (ex. ["etc/my_jetty.xml", "etc/other.xml"] as in http://wiki.eclipse.org/Jetty/Reference/jetty.xml_usage
 
   # configure the singleton with some defaults
@@ -42,6 +44,7 @@ class Jettywrapper
     self.startup_wait = params[:startup_wait] || 5
     self.java_opts = params[:java_opts] || []
     self.java_command = params[:java_command] || default_java_command
+    self.java_version = params[:java_version]
     self.jetty_opts = params[:jetty_opts] || []
   end
 
@@ -331,6 +334,35 @@ class Jettywrapper
       end
     end
 
+    def check_java_version! java_path, required_java_version
+      Tempfile.open("java-version-output") do |f|
+        process = ChildProcess.build(java_path, "-version")
+        process.io.stderr = f
+        process.start
+
+        begin
+          process.poll_for_exit(10)
+        rescue ChildProcess::TimeoutError
+          process.stop # tries increasingly harsher methods to kill the process.
+        end
+
+        f.rewind
+        err = f.read
+
+        java_version = if version = err.match(/java version "([^"]+)"/)
+          version[1]
+        else
+          raise "Java not found, or an error was encountered when running `#{java_path} -version`: #{err}"
+        end
+
+        unless Gem::Dependency.new('', required_java_version.gsub("_", ".")).match?('', java_version.gsub("_", "."))
+          raise "Java #{required_java_version} is required to run Jetty. Found Java #{java_version} when running `#{java_path} -version`."
+        end
+      end
+
+      true
+    end
+
     def logger=(logger)
       @@logger = logger
     end
@@ -357,6 +389,12 @@ class Jettywrapper
      "-Dsolr.solr.home=#{Shellwords.escape(@solr_home)}"]
   end
 
+  def check_java_version!
+    if java_version
+      @checked_java_version ||= Jettywrapper.check_java_version!(java_command, java_version)
+    end
+  end
+
   # Start the jetty server. Check the pid file to see if it is running already,
   # and stop it if so. After you start jetty, write the PID to a file.
   # This is the instance start method. It must be called on Jettywrapper.instance
@@ -369,6 +407,8 @@ class Jettywrapper
     logger.debug "Starting jetty with these values: "
     logger.debug "jetty_home: #{@jetty_home}"
     logger.debug "jetty_command: #{jetty_command.join(' ')}"
+
+    check_java_version!
 
     # Check to see if we can start.
     # 1. If there is a pid, check to see if it is really running

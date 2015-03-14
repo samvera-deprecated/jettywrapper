@@ -104,6 +104,19 @@ module Hydra
         end
       end
 
+      describe "#check_java_version!" do
+        it "should check for a required minimum version of java" do
+          expect(Jettywrapper.check_java_version!("java", ">= 1.2")).to eq true
+        end
+
+        it "should raise an exception if java can't be found" do
+          expect { Jettywrapper.check_java_version!("/bin/cat", ">= 1.2") }.to raise_error /Java not found/
+        end
+
+        it "should raise an exception if the version of java is not new enough" do
+          expect { Jettywrapper.check_java_version!("java", ">= 999.999") }.to raise_error /999.999 is required to run Jetty/
+        end
+      end
     end
   end
 end
