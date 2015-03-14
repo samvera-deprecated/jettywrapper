@@ -1,4 +1,3 @@
-require 'singleton'
 require 'fileutils'
 require 'shellwords'
 require 'socket'
@@ -10,6 +9,7 @@ require 'erb'
 require 'yaml'
 require 'logger'
 require 'open-uri'
+require 'tempfile'
 require 'zip'
 
 Dir[File.expand_path(File.join(File.dirname(__FILE__),"tasks/*.rake"))].each { |ext| load ext } if defined?(Rake)
@@ -17,7 +17,6 @@ Dir[File.expand_path(File.join(File.dirname(__FILE__),"tasks/*.rake"))].each { |
 # Jettywrapper is a Singleton class, so you can only create one jetty instance at a time.
 class Jettywrapper
 
-  include Singleton
   include ActiveSupport::Benchmarkable
 
   attr_accessor :jetty_home   # Jetty's home directory
@@ -27,13 +26,27 @@ class Jettywrapper
   attr_accessor :solr_home    # Solr's home directory. Default is jetty_home/solr
   attr_accessor :base_path    # The root of the application. Used for determining where log files and PID files should go.
   attr_accessor :java_opts    # Options to pass to java (ex. ["-Xmx512mb", "-Xms128mb"])
+  attr_accessor :java_command # Path to the Java executable
+  attr_accessor :java_version # Minimum java version
   attr_accessor :jetty_opts   # Options to pass to jetty (ex. ["etc/my_jetty.xml", "etc/other.xml"] as in http://wiki.eclipse.org/Jetty/Reference/jetty.xml_usage
 
   # configure the singleton with some defaults
   def initialize(params = {})
     self.base_path = self.class.app_root
+    configure(params)
   end
 
+  def configure params
+    self.quiet = params[:quiet].nil? ? true : params[:quiet]
+    self.jetty_home = params[:jetty_home] || File.expand_path(File.join(self.base_path, 'jetty'))
+    self.solr_home = params[:solr_home]  || File.join( self.jetty_home, "solr")
+    self.port = params[:jetty_port] || 8888
+    self.startup_wait = params[:startup_wait] || 5
+    self.java_opts = params[:java_opts] || []
+    self.java_command = params[:java_command] || default_java_command
+    self.java_version = params[:java_version]
+    self.jetty_opts = params[:jetty_opts] || []
+  end
 
   # Methods inside of the class << self block can be called directly on Jettywrapper, as class methods.
   # Methods outside the class << self block must be called on Jettywrapper.instance, as instance methods.
@@ -193,15 +206,12 @@ class Jettywrapper
     def configure(params = {})
       jetty_server = self.instance
       jetty_server.reset_process!
-      jetty_server.quiet = params[:quiet].nil? ? true : params[:quiet]
-
-      jetty_server.jetty_home = params[:jetty_home] || File.expand_path(File.join(app_root, 'jetty'))
-      jetty_server.solr_home = params[:solr_home]  || File.join( jetty_server.jetty_home, "solr")
-      jetty_server.port = params[:jetty_port] || 8888
-      jetty_server.startup_wait = params[:startup_wait] || 5
-      jetty_server.java_opts = params[:java_opts] || []
-      jetty_server.jetty_opts = params[:jetty_opts] || []
+      jetty_server.configure params
       return jetty_server
+    end
+
+    def instance
+      @instance ||= Jettywrapper.new
     end
 
     # Wrap the tests. Startup jetty, yield to the test task, capture any errors, shutdown
@@ -324,6 +334,35 @@ class Jettywrapper
       end
     end
 
+    def check_java_version! java_path, required_java_version
+      Tempfile.open("java-version-output") do |f|
+        process = ChildProcess.build(java_path, "-version")
+        process.io.stderr = f
+        process.start
+
+        begin
+          process.poll_for_exit(10)
+        rescue ChildProcess::TimeoutError
+          process.stop # tries increasingly harsher methods to kill the process.
+        end
+
+        f.rewind
+        err = f.read
+
+        java_version = if version = err.match(/java version "([^"]+)"/)
+          version[1]
+        else
+          raise "Java not found, or an error was encountered when running `#{java_path} -version`: #{err}"
+        end
+
+        unless Gem::Dependency.new('', required_java_version.gsub("_", ".")).match?('', java_version.gsub("_", "."))
+          raise "Java #{required_java_version} is required to run Jetty. Found Java #{java_version} when running `#{java_path} -version`."
+        end
+      end
+
+      true
+    end
+
     def logger=(logger)
       @@logger = logger
     end
@@ -342,12 +381,18 @@ class Jettywrapper
 
   # What command is being run to invoke jetty?
   def jetty_command
-    ["java", java_variables, java_opts, "-jar", "start.jar", jetty_opts].flatten
+    [java_command, java_variables, java_opts, "-jar", "start.jar", jetty_opts].flatten
   end
 
   def java_variables
     ["-Djetty.port=#{@port}",
      "-Dsolr.solr.home=#{Shellwords.escape(@solr_home)}"]
+  end
+
+  def check_java_version!
+    if java_version
+      @checked_java_version ||= Jettywrapper.check_java_version!(java_command, java_version)
+    end
   end
 
   # Start the jetty server. Check the pid file to see if it is running already,
@@ -362,6 +407,8 @@ class Jettywrapper
     logger.debug "Starting jetty with these values: "
     logger.debug "jetty_home: #{@jetty_home}"
     logger.debug "jetty_command: #{jetty_command.join(' ')}"
+
+    check_java_version!
 
     # Check to see if we can start.
     # 1. If there is a pid, check to see if it is really running
@@ -485,4 +532,22 @@ class Jettywrapper
   def pid
     File.open( pid_path ) { |f| return f.gets.to_i } if File.exist?(pid_path)
   end
+
+  private
+
+  def default_java_command
+    # Use the same JAVA_HOME lookup as Solr
+    @default_java_command ||= if ENV["JAVA_HOME"]
+      if File.exists? File.join(ENV["JAVA_HOME"], "bin", "java")
+        File.join(ENV["JAVA_HOME"], "bin", "java")
+      end
+
+      if File.exists? File.join(ENV["JAVA_HOME"], "amd64", "bin", "java")
+        File.join(ENV["JAVA_HOME"], "amd64", "bin", "java")
+      end
+    end
+
+    @default_java_command ||= "java"
+  end
+
 end

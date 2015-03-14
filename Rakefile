@@ -20,21 +20,6 @@ RSpec::Core::RakeTask.new(:spec => 'jetty:clean') do |spec|
 #  spec.spec_files = FileList['spec/**/*_spec.rb']
 end
 
-RSpec::Core::RakeTask.new(:coverage) do |spec|
-  ruby_engine = defined?(RUBY_ENGINE) ? RUBY_ENGINE : "ruby"
-  ENV['COVERAGE'] = 'true' unless ruby_engine == 'jruby'
-
-  if ENV['COVERAGE'] and RUBY_VERSION =~ /^1.8/
-    spec.rcov = true
-    spec.rcov_opts = %w{--exclude spec\/*,gems\/*,ruby\/* --aggregate coverage.data}
-  end
-end
-
-task :clean do
-  puts 'Cleaning old coverage.data'
-  FileUtils.rm('coverage.data') if(File.exists? 'coverage.data')
-end
-
 # Use yard to build docs
 begin
   require 'yard'
@@ -54,5 +39,4 @@ rescue LoadError
   end
 end
 
-#task :default => [:coverage, :doc]
 task :default => [:spec]

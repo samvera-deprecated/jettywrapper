@@ -1,12 +1,5 @@
-$: << File.join(File.dirname(__FILE__), "/../../lib")
-
-if ENV['COVERAGE'] and RUBY_VERSION =~ /^1.9/
-  require 'simplecov'
-  require 'simplecov-rcov'
-
-  SimpleCov.formatter = SimpleCov::Formatter::RcovFormatter
-  SimpleCov.start
-end
+require 'simplecov'
+SimpleCov.start
 
 require 'rspec/its'
 require 'jettywrapper'
