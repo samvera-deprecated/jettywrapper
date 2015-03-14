@@ -25,6 +25,7 @@ class Jettywrapper
   attr_accessor :solr_home    # Solr's home directory. Default is jetty_home/solr
   attr_accessor :base_path    # The root of the application. Used for determining where log files and PID files should go.
   attr_accessor :java_opts    # Options to pass to java (ex. ["-Xmx512mb", "-Xms128mb"])
+  attr_accessor :java_command # Path to the Java executable
   attr_accessor :jetty_opts   # Options to pass to jetty (ex. ["etc/my_jetty.xml", "etc/other.xml"] as in http://wiki.eclipse.org/Jetty/Reference/jetty.xml_usage
 
   # configure the singleton with some defaults
@@ -40,6 +41,7 @@ class Jettywrapper
     self.port = params[:jetty_port] || 8888
     self.startup_wait = params[:startup_wait] || 5
     self.java_opts = params[:java_opts] || []
+    self.java_command = params[:java_command] || default_java_command
     self.jetty_opts = params[:jetty_opts] || []
   end
 
@@ -347,7 +349,7 @@ class Jettywrapper
 
   # What command is being run to invoke jetty?
   def jetty_command
-    ["java", java_variables, java_opts, "-jar", "start.jar", jetty_opts].flatten
+    [java_command, java_variables, java_opts, "-jar", "start.jar", jetty_opts].flatten
   end
 
   def java_variables
@@ -490,4 +492,22 @@ class Jettywrapper
   def pid
     File.open( pid_path ) { |f| return f.gets.to_i } if File.exist?(pid_path)
   end
+
+  private
+
+  def default_java_command
+    # Use the same JAVA_HOME lookup as Solr
+    @default_java_command ||= if ENV["JAVA_HOME"]
+      if File.exists? File.join(ENV["JAVA_HOME"], "bin", "java")
+        File.join(ENV["JAVA_HOME"], "bin", "java")
+      end
+
+      if File.exists? File.join(ENV["JAVA_HOME"], "amd64", "bin", "java")
+        File.join(ENV["JAVA_HOME"], "amd64", "bin", "java")
+      end
+    end
+
+    @default_java_command ||= "java"
+  end
+
 end

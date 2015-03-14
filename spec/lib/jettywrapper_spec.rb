@@ -364,6 +364,12 @@ require 'fileutils'
         expect(File.file? swp.pid_path).to eql(false)
       end
 
+      it "can pass the java executable in the configuration" do
+        subject = Jettywrapper.new(java_command: "/dev/null/java")
+        allow_any_instance_of(Jettywrapper).to receive(:process).and_return(double('proc', :start => nil, :pid=>2323))
+        expect(subject.jetty_command.first).to eq "/dev/null/java" 
+      end
+
       describe "creates a pid file" do
         let(:ts) { Jettywrapper.configure(@jetty_params) }
         describe "when the environment isn't set" do
