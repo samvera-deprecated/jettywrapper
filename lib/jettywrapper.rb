@@ -1,4 +1,3 @@
-require 'singleton'
 require 'fileutils'
 require 'shellwords'
 require 'socket'
@@ -17,7 +16,6 @@ Dir[File.expand_path(File.join(File.dirname(__FILE__),"tasks/*.rake"))].each { |
 # Jettywrapper is a Singleton class, so you can only create one jetty instance at a time.
 class Jettywrapper
 
-  include Singleton
   include ActiveSupport::Benchmarkable
 
   attr_accessor :jetty_home   # Jetty's home directory
@@ -32,8 +30,18 @@ class Jettywrapper
   # configure the singleton with some defaults
   def initialize(params = {})
     self.base_path = self.class.app_root
+    configure(params)
   end
 
+  def configure params
+    self.quiet = params[:quiet].nil? ? true : params[:quiet]
+    self.jetty_home = params[:jetty_home] || File.expand_path(File.join(self.base_path, 'jetty'))
+    self.solr_home = params[:solr_home]  || File.join( self.jetty_home, "solr")
+    self.port = params[:jetty_port] || 8888
+    self.startup_wait = params[:startup_wait] || 5
+    self.java_opts = params[:java_opts] || []
+    self.jetty_opts = params[:jetty_opts] || []
+  end
 
   # Methods inside of the class << self block can be called directly on Jettywrapper, as class methods.
   # Methods outside the class << self block must be called on Jettywrapper.instance, as instance methods.
@@ -193,15 +201,12 @@ class Jettywrapper
     def configure(params = {})
       jetty_server = self.instance
       jetty_server.reset_process!
-      jetty_server.quiet = params[:quiet].nil? ? true : params[:quiet]
-
-      jetty_server.jetty_home = params[:jetty_home] || File.expand_path(File.join(app_root, 'jetty'))
-      jetty_server.solr_home = params[:solr_home]  || File.join( jetty_server.jetty_home, "solr")
-      jetty_server.port = params[:jetty_port] || 8888
-      jetty_server.startup_wait = params[:startup_wait] || 5
-      jetty_server.java_opts = params[:java_opts] || []
-      jetty_server.jetty_opts = params[:jetty_opts] || []
+      jetty_server.configure params
       return jetty_server
+    end
+
+    def instance
+      @instance ||= Jettywrapper.new
     end
 
     # Wrap the tests. Startup jetty, yield to the test task, capture any errors, shutdown
