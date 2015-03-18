@@ -8,24 +8,24 @@ namespace :umich do
     UMichwrapper.clean(UMICH_CONFIG)
   end
 
+  directory "dist"
+  directory "config"
+
   desc "Build war file."
-  task :build do
+  task :build => ["dist","config"] do
     # copy config/warble if doesn't exist
     local_config = File.join 'config', 'warble.rb'
     if File.exist?(local_config ) == false
-      puts "--- Needs a config/warble.rb"
+      puts "--- Creating config/warble.rb."
       src = File.join File.expand_path( '../../../config',__FILE__), 'warble.rb'
-      puts "Src  exists? #{File.exist? src}. #{src}"
-      puts "Src: #{src}\nDst:#{local_config}"
       FileUtils.copy_file( src, local_config )
     end
-
     # shell out to warbler
     puts %x{warble}
   end
 
   desc "Start application after creating fedora node and solr cores."
-  task :start => :environment do
+  task :start => [:environment, :build] do
     UMichwrapper.start(UMICH_CONFIG)
   end
   
@@ -52,10 +52,10 @@ namespace :umich do
     UMichwrapper.print_status(UMICH_CONFIG)
   end
 
+  desc "Build & deploy application to app server."
+  task :deploy => [:environment, :build] do
+    UMichwrapper.deploy(UMICH_CONFIG)
+  end
+
 end
 
-namespace :repo do
-
-
-
-end

@@ -5,20 +5,27 @@ This gem is a poorly done hack of Jettwrapper.  It is designed as a replacement 
 
 ## Configuring
 
+**Make sure that your project's config directory is included in .gitignore:** `config/*`
+Good practice, common sense, and decency to sysadmins dictates that you omit your local configuration from your git repository.
+
 UMichwrapper starts by looking for config/umich.yml in your project.  Failing that, it uses the umich.yml in the gem's config directory.  Finally, there are some defaults in the code for parameters that require values.  The defaults are set up to work in the UMich dev deoployment of solr, fedora, and torquebox. 
 
 ```yaml
 development:
   startup_wait: 59
-  solr_host: localhost
-  solr_port: 8080
-  solr_home: /quod-dev/idx/h/hydra-solr
-  solr_cntx: hydra-solr
+  solr_home:  /quod-dev/idx/h/hydra-solr
+  solr_url:   localhost:8080/tomcat/quod-dev/solr-hydra
+  fedora_url: localhost:8080/tomcat/quod-dev/fedora
+  tomcat_url: localhost:8080
+  tomcat_usr: tomcat-manager
+  tomcat_pwd: HereComesThe401.YouNeedToChangeThis
 
 testing:
-  startup_wait: 29
-  solr_home: /quod-dev/idx/h/hydra-solr
-  solr_cntx: hydra-solr
+  startup_wait: 59
+  solr_home:  /quod-dev/idx/h/hydra-solr
+  solr_url:   localhost:8080/tomcat/quod-dev/solr-hydra
+  fedora_url: localhost:8080/tomcat/quod-dev/fedora
+  ...
 ```
 
 ## Use
@@ -30,6 +37,8 @@ Adding the UMichwrapper github repo to your rails project's Gemfile and using bu
 gem 'umichwrapper', github: 'grosscol/umichwrapper', branch: 'master'
 ``` 
 Verify umich tasks are available with `bundle exec rake --tasks`
+
+Deployed application avaliable at $uname.quod.lib.umich.edu/tomcat/quod-dev/$uname.quod.lib/hydra/$appname
 
 ## Notes
 

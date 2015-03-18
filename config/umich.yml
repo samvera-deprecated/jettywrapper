@@ -1,11 +1,16 @@
 development:
   startup_wait: 59
-  solr_host: localhost
-  solr_port: 8080
-  solr_home: /quod-dev/idx/h/hydra-solr
-  solr_cntx: hydra-solr
+  solr_home:  /quod-dev/idx/h/hydra-solr
+  solr_url:   localhost:8080/tomcat/quod-dev/solr-hydra
+  fedora_url: localhost:8080/tomcat/quod-dev/fedora
+  tomcat_url: localhost:8080
+  tomcat_usr: tomcat-manager
+  tomcat_pwd: HereComesThe401.YouNeedToChangeThis
 
 testing:
   startup_wait: 29
-  solr_home: /quod-dev/idx/h/hydra-solr
-  solr_cntx: hydra-solr
+  solr_url:   localhost:8080/quod-dev/hydra-solr
+  fedora_url: localhost:8080/quod-dev/fedora
+  tomcat_url: localhost:8080/manager
+  tomcat_usr: tomcat-manager
+  tomcat_pwd: HereComesThe401.YouNeedToChangeThis

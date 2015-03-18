@@ -2,6 +2,8 @@
 Warbler::Config.new do |config|
   config.features = ['compiled']
 
+  config.webxml.rails.env='development'
+
   # Name of the archive (without the extension). Defaults to the basename
   # of the project directory.
   config.jar_name = ENV['WAR_FILENAME'] ||= "demoname"

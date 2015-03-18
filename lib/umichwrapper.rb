@@ -18,14 +18,13 @@ class UMichwrapper
   include Singleton
 
   attr_accessor :startup_wait # How many seconds to wait for jetty to spin up. Default is 5.
-  attr_accessor :solr_home, :solr_host, :solr_port, :solr_cntx 
-  attr_accessor :fedora_host, :fedora_port, :fedora_cntx 
-  attr_accessor :solr_admin_url
-  attr_accessor :fedora_rest_url
+  attr_accessor :fedora_url, :solr_url
+  attr_accessor :tomcat_url, :tomcat_usr, :tomcat_pwd
+  attr_accessor :solr_admin_url, :fedora_rest_url, :tomcat_admin_url
   attr_accessor :solr_core_name, :fedora_node_path
-  attr_accessor :torq_home
+  attr_accessor :solr_home # Home directory for solr. Cores get added here.
   attr_accessor :app_name
-  attr_accessor :deploy_dir
+  attr_accessor :dist_dir
   attr_accessor :base_path
 
   # configure the singleton with some defaults
@@ -37,7 +36,7 @@ class UMichwrapper
   # Methods outside the class << self block must be called on UMichwrapper.instance, as instance methods.
   class << self
 
-    attr_writer :hydra_jetty_version, :url, :env
+    attr_writer :hydra_jetty_version, :env
 
     def hydra_jetty_version
       @hydra_jetty_version ||= 'v7.0.0'
@@ -46,7 +45,6 @@ class UMichwrapper
     def reset_config
       @app_root = nil
       @env = nil
-      @url = nil
       @hydra_jetty_version = nil
     end
 
@@ -114,8 +112,6 @@ class UMichwrapper
     # @return instance
     #
     # @param [Hash<Symbol>] params
-    #   :torq_home is the root directory of torquebox.
-    #
     #   :solr_host is the name of the server on which solr is running.
     #   :solr_port is the port number on which solr is listening.
     #
@@ -130,22 +126,24 @@ class UMichwrapper
       params ||= {}
       tupac = self.instance
 
-      # Params with required defaults
-      tupac.solr_home = params[:solr_home] || "/l/local/solr/#{ENV['USER']}"
-      tupac.solr_host = params[:solr_host] || "localhost"
-      tupac.solr_port = params[:solr_port] || 8080
-      tupac.fedora_host = params[:fedora_host] || "localhost"
-      tupac.fedora_port = params[:fedora_port] || 8080
-      tupac.torq_home = params[:torq_home] || "/l/local/torquebox"
-      tupac.startup_wait = params[:startup_wait] || 5
+      # Params for Solr
+      tupac.solr_url = params[:solr_url] || "localhost:8080/solr-hydra"
+      tupac.solr_admin_url   = "#{tupac.solr_url}/admin" 
+      tupac.solr_home = params[:solr_home] || "/quod-dev/idx/h/hydra-solr"
 
-      # Derived Parameters
+      # Params for Fedora
+      tupac.fedora_url = params[:fedora_url] || "localhost:8080/fedora"
+      tupac.fedora_rest_url   = "#{tupac.fedora_url}/rest" 
+
+      # Params for App Server
+      tupac.tomcat_url = params[:tomcat_url]
+      tupac.tomcat_usr = params[:tomcat_usr]
+      tupac.tomcat_pwd = params[:tomcat_pwd]
+      tupac.startup_wait = params[:startup_wait] || 5
+      tupac.dist_dir = params[:dist_dir] || "dist"
+
+      # Discovered Parameters
       tupac.app_name   = params[:app_name]   || File.basename( tupac.base_path )
-      tupac.deploy_dir = params[:deploy_dir] || File.join( tupac.torq_home, "deployments" )
-      tupac.fedora_cntx = params[:fedora_cntx] || "fedora"
-      tupac.solr_cntx = params[:solr_cntx] || "hydra-solr"
-      tupac.solr_admin_url   = "#{tupac.solr_host}:#{tupac.solr_port}/#{tupac.solr_cntx}/admin" 
-      tupac.fedora_rest_url   = "#{tupac.fedora_host}:#{tupac.fedora_port}/#{tupac.fedora_cntx}/rest" 
 
       # Params without required defaults.
       tupac.solr_core_name = params[:solr_core_name]
@@ -156,22 +154,20 @@ class UMichwrapper
 
     def print_status(params = {})
       tupac = configure( params )
-      puts "solr_home:      #{tupac.solr_home}"
-      puts "solr_host:      #{tupac.solr_host}"
-      puts "solr_port:      #{tupac.solr_port}"
-      puts "solr_cntx:      #{tupac.solr_cntx}"
+      puts "solr_url:       #{tupac.solr_url}"
+      puts "fedora_url:     #{tupac.fedora_url}"
       puts "--"
-      puts "fedora_host:    #{tupac.fedora_host}"
-      puts "fedora_port:    #{tupac.fedora_port}"
-      puts "fedora_cntx:    #{tupac.fedora_cntx}"
+      puts "tomcat_url:     #{tupac.tomcat_url}"
+      puts "tomcat_usr:     #{tupac.tomcat_usr}"
+      puts "tomcat_pwd:     #{tupac.tomcat_pwd}"
       puts "--"
-      puts "torq_home:      #{tupac.torq_home}"
       puts "startup_wait:   #{tupac.startup_wait}"
       puts "app_name:       #{tupac.app_name}"
-      puts "deploy_dir:     #{tupac.deploy_dir}"
       puts "app_root:       #{UMichwrapper.app_root}"
       puts "-- Application --"
+      puts "solr running:   #{tupac.solr_running?}"
       puts "app deployed:   #{tupac.is_deployed?}"
+
       puts "-- Cores --"
       tupac.core_status.each{|core, info| puts "#{info["instanceDir"]} :: #{core}"}
       puts "-- Nodes --"
@@ -189,6 +185,11 @@ class UMichwrapper
       UMichwrapper.instance.add_node("test")
       UMichwrapper.instance.deploy_app
       return UMichwrapper.instance
+    end
+
+    def deploy(params)
+      UMichwrapper.configure(params)
+      UMichwrapper.instance.deploy_app
     end
 
     def clean(params)
@@ -233,10 +234,15 @@ class UMichwrapper
     target_url = "#{self.solr_admin_url}/cores"
     resp = Typhoeus.get(target_url, params: vars)
     
-    body = JSON.parse!(resp.response_body)
-
-    # Array of two elements [name string, info hash]
-    return body["status"]
+    if resp.response_code == 200
+      body = JSON.parse!(resp.response_body)
+      # Array of two elements [name string, info hash]
+      return body["status"]
+    else
+      logger.error("Core status query: #{target_url}")
+      logger.error("Core status query response error.  Response code #{resp.response_code}")
+      return []
+    end
   end
 
   def del_core
@@ -308,8 +314,6 @@ class UMichwrapper
       return
     end
 
-    # Create core_inst_dir directory on the file system.
-
     # File operation to copy dir and files from template
     # Check for solr_cores/corename template in current directory
     if Dir.exist? File.join("solr_coresn", template_corename)
@@ -320,6 +324,9 @@ class UMichwrapper
       src  = File.join( File.expand_path("../../solr_cores", __FILE__), template_corename )
     end
     
+    # Create core_inst_dir directory parent on the file system.
+    FileUtils.mkdir_p( File.expand_path("..", core_inst_dir) )
+
     # Copy contents of template source to core instance directory
     FileUtils.cp_r(src, core_inst_dir)
     logger.info "Core template: #{src}"
@@ -410,87 +417,53 @@ class UMichwrapper
     self.class.logger
   end
 
-  # Check to see if the application is deployed.
-  def is_deployed?(params = {})
-    if !File.exists? self.deploy_dir
-      raise("Torquebox deployment dir does not exist: #{self.deploy_dir}")
+  def is_deployed?
+    appname = "#{ENV['USER']}.quod.lib/hydra/demoname"
+    target_url = "#{self.tomcat_url}/manager/text/list"
+    upwd = "#{self.tomcat_usr}:#{self.tomcat_pwd}"
+    resp = Typhoeus.get(target_url, userpwd: upwd)
+
+    if resp.response_code == 401
+      logger.error "Tomcat: 401 authentication not accepted.  Check tomcat_user and tomcat_pwd in config."
+      return false
     end
 
-    knob_path = File.join(self.deploy_dir, "#{ENV['USER']}-#{self.app_name}-knob.yml.deployed")
-    return File.exist? knob_path
+    # Return true if the response was OK and the appname was found in the string.
+    return resp.response_code == 200 && resp.body.match(appname)
+
   end
 
-  # This is the instance start method. It must be called on UMichwrapper.instance
-  # You're probably better off using UMichwrapper.start()
-  # @example
-  #    UMichwrapper.configure(params)
-  #    UMichwrapper.instance.start
-  #    return UMichwrapper.instance
-  # Make sure that Solr and Fedora cores and nodes are in order.
+  # Deploy war file to tomcat application server using management api
+  #
   def deploy_app
+    war_path = File.absolute_path File.join("dist", "demoname.war")
     app_name = self.app_name
-    deploy_dir = File.join( self.torq_home, "deployments" )
 
     logger.debug "Deploying application using the following parameters: "
     logger.debug "  app_name: #{app_name}"
-    logger.debug "  deploy_dir: #{deploy_dir}"
+    logger.debug "  war_path: #{war_path}"
 
-    # Check to see if we can start.
-    # 0. Torquebox deployments exists and is writable.
-    # 1. If a .deployed file exists, app is already deployed.
-    if is_deployed?
-      logger.info "Application already deployed."
-      return
+    #debug
+    appname = "demoname"
+    # parameters for api call
+    upwd = "#{self.tomcat_usr}:#{self.tomcat_pwd}"
+    target_url = "#{self.tomcat_url}/manager/text/deploy"
+    vars = {war: "file:/#{war_path}", path: "/tomcat/quod-dev/#{ENV['USER']}.quod.lib/hydra/#{appname}" }
+
+    # Check if this is deployed on the tomcat server
+    # and update & restart
+    if File.exist?(war_path) == false
+      logger.error "War file does not exist.  Aborting deployment."
+    elsif is_deployed?
+      logger.info "Application already deployed on tomcat.  Updating."
+      vars[:update]="true"
+      resp = Typhoeus.get(target_url, userpwd: upwd, params: vars)
+      puts resp.body
+    else
+      resp = Typhoeus.get(target_url, userpwd: upwd, params: vars )
+      puts resp.body
     end
-
-    # If -knob.yml.failed is present, previous deployment failed.
-
-    # Write -knob.yml if not present and touch -know.yml.dodeploy
-    deploy_yaml
-
-    # Wait until -knob.yml.deployed or -knob.yml.failed appears
-    startup_wait!
-  end
-
-  def deployment_descriptor()
-    ddir = self.deploy_dir
-    appn = self.app_name
-
-    # The deployment descriptor is a hash
-    d = {}
-    d['application'] = {}
-    d['application']['root'] = "#{UMichwrapper.app_root}"
-    d['environment'] = {}
-    d['environment']['RAILS_ENV'] =  "development"
-    d['environment']['RAILS_RELATIVE_URL_ROOT'] = "/"
-
-    d['web'] = {}
-    d['web']['context'] = "tb/quod-dev/#{ENV['USER']}.quod.lib/testapp/"
-
-    return d
-  end
-
-  def deploy_yaml(clobber=false)
-    knobname = "#{ENV['USER']}-#{self.app_name}-knob.yml"
-    knob_file_path = File.join(self.deploy_dir, knobname)
-
-    # Only write the knob file if file doesn't exist or clober is true
-    if !File.exist?(knob_file_path) || clobber == true
-      File.open( knob_file_path, 'w' ) do |file|
-        YAML.dump( deployment_descriptor, file )
-      end
-    end
-    FileUtils.touch( "#{knob_file_path}.dodeploy" )
-  end
-
-  def undeploy_yaml
-    knobname = "#{ENV['USER']}-#{self.app_name}-knob.yml"
-    knob_file_path = File.join(self.deploy_dir, knobname)
-
-    Dir.glob("#{knob_file_path}*") do |p|
-      File.delete(p)
-      logger.info "Found & removed #{p}"
-    end
+    
   end
 
   # Wait for the jetty server to start and begin listening for requests
@@ -501,11 +474,11 @@ class UMichwrapper
     Timeout::timeout(self.startup_wait) do
       while is_deployed? == false do
         count = count + 1
-        sleep 1
+        sleep 10
       end
     end
     rescue Timeout::Error
-      logger.warn "App not deployed after #{self.startup_wait} seconds. Continuing anyway."
+      logger.warn "App not deployed after #{self.startup_wait * 10} seconds. Continuing anyway."
     end
 
     logger.info "App deployed after #{count} seconds."
@@ -519,17 +492,7 @@ class UMichwrapper
   #    return UMichwrapper.instance
   def stop
     app_name = File.basename(self.base_path)
-    deploy_dir = File.join( self.torq_home, "deployments" )
 
-    if is_deployed? == false
-      logger.debug "#{app_name} is not currently deployed to #{deploy_dir}."
-    end
-
-    # Undeploy by removing -knob.yml.deployed file
-    logger.debug "Un-deploying the following application:"
-    logger.debug "app_name: #{app_name}"
-    logger.debug "deploy_dir: #{deploy_dir}"
-    undeploy_yaml
-
+    logger.info("Stop application noop")
   end
 end
