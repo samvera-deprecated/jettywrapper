@@ -13,4 +13,4 @@ testing:
   fedora_url: localhost:8080/quod-dev/fedora
   tomcat_url: localhost:8080/manager
   tomcat_usr: tomcat-manager
-  tomcat_pwd: HereComesThe401.YouNeedToChangeThis
+  tomcat_pwd: HereComesThe401YouNeedToChangeThis
