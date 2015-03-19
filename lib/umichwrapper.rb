@@ -23,7 +23,7 @@ class UMichwrapper
   attr_accessor :solr_admin_url, :fedora_rest_url, :tomcat_admin_url
   attr_accessor :solr_core_name, :fedora_node_path
   attr_accessor :solr_home # Home directory for solr. Cores get added here.
-  attr_accessor :app_name
+  attr_accessor :app_name, :app_base_path
   attr_accessor :dist_dir
   attr_accessor :base_path
 
@@ -141,7 +141,7 @@ class UMichwrapper
       tupac.tomcat_pwd = params[:tomcat_pwd]
       tupac.startup_wait = params[:startup_wait] || 5
       tupac.dist_dir = params[:dist_dir] || "dist"
-
+      tupac.app_base_path = params[:app_base_path] || "/tomcat/quod-dev/#{ENV['USER']}.quod.lib/hydra"
       # Discovered Parameters
       tupac.app_name   = params[:app_name]   || File.basename( tupac.base_path )
 
@@ -182,7 +182,6 @@ class UMichwrapper
       UMichwrapper.configure(params)
       UMichwrapper.instance.add_core
       UMichwrapper.instance.add_node("dev")
-      UMichwrapper.instance.add_node("test")
       UMichwrapper.instance.deploy_app
       return UMichwrapper.instance
     end
@@ -196,7 +195,6 @@ class UMichwrapper
       UMichwrapper.configure(params)
       UMichwrapper.instance.del_core
       UMichwrapper.instance.del_node("dev")
-      UMichwrapper.instance.del_node("test")
       UMichwrapper.instance.stop
       return UMichwrapper.instance
     end
@@ -270,22 +268,22 @@ class UMichwrapper
   end
 
   def corename
-    # If solr_core_name is specified, use that.
-    if self.solr_core_name
-      return self.solr_core_name
-    end
+    name = self.solr_core_name || env_fullname( UMichwrapper.env )
+  end
 
-    # Otherwise, consult the environment
-    case UMichwrapper.env
+  def nodename
+    name = self.fedora_node_name || env_fullname( UMichwrapper.env )
+  end
+
+  def env_fullname( env )
+    case env
     when /^dev(elopment)?/i
-      name = "dev"
+      "dev"
     when /^test(ing)?/i
-      name = "test"
+      "test"
     else
-      name = 'default'
+      'default'
     end
-
-    return "#{ENV['USER']}-#{name}"
   end
 
   def template_corename
@@ -302,7 +300,8 @@ class UMichwrapper
 
   def add_core()
     # Get core instance dir for user/project
-    core_inst_dir = File.join( self.solr_home, ENV['USER'], corename )
+    cname = "#{ENV['USER']}-#{corename}"
+    core_inst_dir = File.join( self.solr_home, ENV['USER'], cname )
 
     # Check if core already exists
     cs = core_status
@@ -310,7 +309,7 @@ class UMichwrapper
 
     # Short circut if core already exists in Solr instance.
     if instance_dirs.include? core_inst_dir
-      logger.info "Core #{ENV['USER']} #{corename} alerady exists."
+      logger.info "Core #{cname} alerady exists."
       return
     end
 
@@ -418,7 +417,7 @@ class UMichwrapper
   end
 
   def is_deployed?
-    appname = "#{ENV['USER']}.quod.lib/hydra/demoname"
+    app_path = "#{self.app_base_path}/#{self.app_name}"
     target_url = "#{self.tomcat_url}/manager/text/list"
     upwd = "#{self.tomcat_usr}:#{self.tomcat_pwd}"
     resp = Typhoeus.get(target_url, userpwd: upwd)
@@ -428,8 +427,8 @@ class UMichwrapper
       return false
     end
 
-    # Return true if the response was OK and the appname was found in the string.
-    return resp.response_code == 200 && resp.body.match(appname)
+    # Return true if the response was OK and the app_path was found in the string.
+    return resp.response_code == 200 && resp.body.match(app_path)
 
   end
 
@@ -439,16 +438,14 @@ class UMichwrapper
     war_path = File.absolute_path File.join("dist", "demoname.war")
     app_name = self.app_name
 
-    logger.debug "Deploying application using the following parameters: "
-    logger.debug "  app_name: #{app_name}"
-    logger.debug "  war_path: #{war_path}"
+    logger.info "Deploying application using the following parameters: "
+    logger.info "  app_name: #{app_name}"
+    logger.info "  war_path: #{war_path}"
 
-    #debug
-    appname = "demoname"
     # parameters for api call
     upwd = "#{self.tomcat_usr}:#{self.tomcat_pwd}"
     target_url = "#{self.tomcat_url}/manager/text/deploy"
-    vars = {war: "file:/#{war_path}", path: "/tomcat/quod-dev/#{ENV['USER']}.quod.lib/hydra/#{appname}" }
+    vars = {war: "file:/#{war_path}", path: "#{self.app_base_path}/#{self.app_name}" }
 
     # Check if this is deployed on the tomcat server
     # and update & restart
@@ -458,10 +455,10 @@ class UMichwrapper
       logger.info "Application already deployed on tomcat.  Updating."
       vars[:update]="true"
       resp = Typhoeus.get(target_url, userpwd: upwd, params: vars)
-      puts resp.body
+      logger.info "Response: #{resp.body}"
     else
       resp = Typhoeus.get(target_url, userpwd: upwd, params: vars )
-      puts resp.body
+      logger.info "Response: #{resp.body}"
     end
     
   end
@@ -491,8 +488,18 @@ class UMichwrapper
   #    UMichwrapper.instance.stop
   #    return UMichwrapper.instance
   def stop
-    app_name = File.basename(self.base_path)
+    app_name = self.app_name
 
-    logger.info("Stop application noop")
+    upwd = "#{self.tomcat_usr}:#{self.tomcat_pwd}"
+    target_url = "#{self.tomcat_url}/manager/text/undeploy"
+    vars = {path: "/tomcat/quod-dev/#{ENV['USER']}.quod.lib/hydra/#{app_name}" }
+
+    if is_deployed?
+      logger.info "Undeploying application: #{app_name}"
+      resp = Typhoeus.get(target_url, userpwd: upwd, params: vars )
+      logger.info "Response: #{resp.body}"
+    else
+      logger.info "Application #{app_name} not currently deployed."
+    end
   end
 end
