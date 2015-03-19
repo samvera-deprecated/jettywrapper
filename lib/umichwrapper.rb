@@ -164,13 +164,13 @@ class UMichwrapper
       puts "startup_wait:   #{tupac.startup_wait}"
       puts "app_name:       #{tupac.app_name}"
       puts "app_root:       #{UMichwrapper.app_root}"
-      puts "-- Application --"
-      puts "solr running:   #{tupac.solr_running?}"
-      puts "app deployed:   #{tupac.is_deployed?}"
+      puts "-- Application  --"
+      puts "solr running:   #{tupac.solr_running?|| 'false'}"
+      puts "app deployed:   #{tupac.is_deployed? || 'false'}"
 
-      puts "-- Cores --"
+      puts "-- Solr Cores   --"
       tupac.core_status.each{|core, info| puts "#{info["instanceDir"]} :: #{core}"}
-      puts "-- Nodes --"
+      puts "-- Fedora Nodes --"
       tupac.node_childs.each{|c| puts "#{c["@id"]}" }
     end
 
@@ -181,7 +181,7 @@ class UMichwrapper
     def start(params)
       UMichwrapper.configure(params)
       UMichwrapper.instance.add_core
-      UMichwrapper.instance.add_node("dev")
+      UMichwrapper.instance.add_node
       UMichwrapper.instance.deploy_app
       return UMichwrapper.instance
     end
@@ -194,7 +194,7 @@ class UMichwrapper
     def clean(params)
       UMichwrapper.configure(params)
       UMichwrapper.instance.del_core
-      UMichwrapper.instance.del_node("dev")
+      UMichwrapper.instance.del_node
       UMichwrapper.instance.stop
       return UMichwrapper.instance
     end
@@ -244,10 +244,11 @@ class UMichwrapper
   end
 
   def del_core
+    cname = "#{ENV['USER']}-#{corename}"
     # API call to unload core with Solr instance.
     vars = {
       action: "UNLOAD",
-      core: corename,
+      core: cname,
       wt: "json"}
 
     target_url = "#{self.solr_admin_url}/cores"
@@ -257,11 +258,11 @@ class UMichwrapper
     if body["error"]
       logger.warn body["error"]
     else
-      logger.info "Core [#{corename}] unloaded."
+      logger.info "Core [#{cname}] unloaded."
     end
 
     # Remove core directory from file system
-    core_inst_dir = File.join( self.solr_home, ENV['USER'], corename )
+    core_inst_dir = File.join( self.solr_home, ENV['USER'], cname )
     logger.info "Deleting dir: #{core_inst_dir}"
 
     FileUtils.rm_rf( core_inst_dir )
@@ -272,7 +273,7 @@ class UMichwrapper
   end
 
   def nodename
-    name = self.fedora_node_name || env_fullname( UMichwrapper.env )
+    name = self.fedora_node_path || env_fullname( UMichwrapper.env )
   end
 
   def env_fullname( env )
@@ -284,18 +285,6 @@ class UMichwrapper
     else
       'default'
     end
-  end
-
-  def template_corename
-    case UMichwrapper.env
-    when /^dev(elopment)?/i
-      name = "dev"
-    when /^test(ing)?/i
-      name = "test"
-    else
-      name = 'default'
-    end
-    return name
   end
 
   def add_core()
@@ -315,12 +304,12 @@ class UMichwrapper
 
     # File operation to copy dir and files from template
     # Check for solr_cores/corename template in current directory
-    if Dir.exist? File.join("solr_coresn", template_corename)
+    if Dir.exist? File.join("solr_coresn", corename)
       logger.info "Using project solr_cores template."
-      src  = File.join("solr_cores", template_corename)
+      src  = File.join("solr_cores", corename)
     else
       logger.info "Using default solr_cores template."
-      src  = File.join( File.expand_path("../../solr_cores", __FILE__), template_corename )
+      src  = File.join( File.expand_path("../../solr_cores", __FILE__), corename )
     end
     
     # Create core_inst_dir directory parent on the file system.
@@ -335,7 +324,7 @@ class UMichwrapper
     # Sometimes core discovery is flakey, so ignore an error response here.
     vars = {
       action: "CREATE",
-      name: corename,
+      name: cname,
       instanceDir: core_inst_dir,
       wt: "json"}
 
@@ -346,7 +335,7 @@ class UMichwrapper
     if body["error"]
       logger.warn body["error"]
     else
-      logger.info "Core [#{corename}] added."
+      logger.info "Core [#{cname}] added."
     end
   end
 
@@ -357,39 +346,42 @@ class UMichwrapper
   end
 
   # Add fedora node
-  def add_node(node_name="dev")
-    # Create the node
+  def add_node
     heads = { 'Content-Type' => "text/plain" }
-    target_url = "#{self.fedora_rest_url}/#{ENV["USER"]}/#{node_name}"
+    nname ="#{ENV["USER"]}-#{nodename}" 
+    target_url = "#{self.fedora_rest_url}/#{ENV["USER"]}/#{nname}"
     
+    # Create the node with a put call
     resp = Typhoeus.put(target_url, headers: heads)
 
-    logger.info "Add node [#{node_name}] response: #{resp.response_code}."
+    logger.info "Add node [#{nname}] response: #{resp.response_code}."
   end
 
   # Delete fedora node
-  def del_node(node_name="dev")
+  def del_node
     # Delete the node
     heads = { 'Content-Type' => "text/plain" }
-    target_url = "#{self.fedora_rest_url}/#{ENV["USER"]}/#{node_name}"
+    nname ="#{ENV["USER"]}-#{nodename}" 
+    target_url = "#{self.fedora_rest_url}/#{ENV["USER"]}/#{nname}"
     
     resp = Typhoeus.delete(target_url, headers: heads)
 
     # 204 for success 404 for already deleted
-    logger.info "Delete node [#{node_name}] response code: #{resp.response_code}. "
+    logger.info "Delete node [#{nname}] response code: #{resp.response_code}. "
 
     # Delete tombstone
-    target_url = "#{self.fedora_rest_url}/#{ENV["USER"]}/#{node_name}/fcr:tombstone"
+    target_url = "#{self.fedora_rest_url}/#{ENV["USER"]}/#{nname}/fcr:tombstone"
     resp = Typhoeus.delete(target_url, headers: heads)
 
     # 204 for success. 404 for already deleted.
-    logger.info "Delete tombstone for [#{node_name}] response code: #{resp.response_code}. "
+    logger.info "Delete tombstone for [#{nname}] response code: #{resp.response_code}. "
   end
 
   # Check if fedora node exists
-  def node_exists?(node_name="dev")
+  def node_exists?
     heads = { 'Content-Type' => "text/plain" }
-    target_url = "#{self.fedora_rest_url}/#{ENV["USER"]}/#{node_name}"
+    nname ="#{ENV["USER"]}-#{nodename}" 
+    target_url = "#{self.fedora_rest_url}/#{ENV["USER"]}/#{nname}"
     
     resp = Typhoeus.get(target_url, headers: heads)
 
