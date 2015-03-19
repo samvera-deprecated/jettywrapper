@@ -3,46 +3,50 @@
 This gem is a poorly done hack of Jettwrapper.  It is designed as a replacement for Jettywrapper in the shared dev environment at the Univerisity of Michigan Library.  This provides the start, stop, and clean tasks for deploying rails applications to our stack.  It does not provide the convenient start/stop functionality that Jettywrapper provides to automate testing.
 
 
-## Configuring
-
-**Make sure that your project's config directory is included in .gitignore:** `config/*`
-Good practice, common sense, and decency to sysadmins dictates that you omit your local configuration from your git repository.
-
-UMichwrapper starts by looking for config/umich.yml in your project.  Failing that, it uses the umich.yml in the gem's config directory.  Finally, there are some defaults in the code for parameters that require values.  The defaults are set up to work in the UMich dev deoployment of solr, fedora, and torquebox. 
-
-```yaml
-development:
-  startup_wait: 59
-  solr_home:  /quod-dev/idx/h/hydra-solr
-  solr_url:   localhost:8080/tomcat/quod-dev/solr-hydra
-  fedora_url: localhost:8080/tomcat/quod-dev/fedora
-  tomcat_url: localhost:8080
-  tomcat_usr: tomcat-manager
-  tomcat_pwd: HereComesThe401.YouNeedToChangeThis
-
-testing:
-  startup_wait: 59
-  solr_home:  /quod-dev/idx/h/hydra-solr
-  solr_url:   localhost:8080/tomcat/quod-dev/solr-hydra
-  fedora_url: localhost:8080/tomcat/quod-dev/fedora
-  ...
-```
-
 ## Use
 
-Adding the UMichwrapper github repo to your rails project's Gemfile and using bundle install should make the umich tasks available to rake.
+Create a new rails project `rails new --skip-bundle myproject`
 
+Change directory into your new project `cd myproject`
+
+Adding the UMichwrapper github repo to your rails project's Gemfile and using bundle install should make the umich tasks available to rake:
 ```
 # UMichwrapper
 gem 'umichwrapper', github: 'grosscol/umichwrapper', branch: 'master'
+# Hackish fix for warbler issue with jruby-openssl
+gem 'jruby-openssl'
 ``` 
+Run bundle install `bundle install --path=.bundle`
+
+Run bundle pacakge `bundle package --all` because warbler.
+
 Verify umich tasks are available with `bundle exec rake --tasks`
 
-Deployed application avaliable at $uname.quod.lib.umich.edu/tomcat/quod-dev/$uname.quod.lib/hydra/$appname
+Create config/umich.yml as detailed below.
+
+Test the test the status task with `bundle exec rake umich:status`
+
+Use `bundle exec rake umich:start` instead of `jetty:start` or `bundle exec rake umich:deploy` to simply deploy the rails app.
+
+Make note of context at which the application is deployed.  That is the context at which you can access the deployed app on your vhost ($uname.quod.lib.umich.edu)
+## Configuring
+
+**Make sure that your project's config directory (config/*) is included in .gitignore:** 
+
+Good practice, common sense, and decency to sysadmins dictates that you omit your local configuration from your git repository.
+
+UMichwrapper starts by looking for config/umich.yml in your project.  Failing that, it uses the umich.yml in the gem's config directory.  Finally, there are some defaults in the code for parameters that require values.  The defaults are set up to work in the UMich dev deoployment of solr, fedora, and tomcat. 
+
+Minmally, you will need to specify the tomcat_pwd under the development group.
+```yaml
+development:
+  startup_wait: 59
+  tomcat_pwd: HereComesThe401_You_Need_To_Change_This!
+```
 
 ## Notes
 
- * This gem does not yet read from solr.yml and fedora.yml in your project config.  However, those do need to point to the corresponding solr and fedora instance/context.  Currently keeping these both configured is on the developer.  Having the UMichwrapper read the solr and fedora configs of your project is next on the list to be implemented.
+ * This gem does not yet read from solr.yml and fedora.yml in your project config.  For hydra, those do need to point to the corresponding solr and fedora instance/context.  Currently keeping these both configured is on the developer.  Having the UMichwrapper read the solr and fedora configs of your project is next on the list to be implemented.
  * This gem has not been tested with the Dive into Hydra tutorial.
  * The unit and integration tests have yet to be completed. 
  * This gem does not yet support facilitating testing in the same way that jettywrapper does.
@@ -60,6 +64,7 @@ Deployed application avaliable at $uname.quod.lib.umich.edu/tomcat/quod-dev/$una
    4. Run `bundle install --path=.bundle` (bundler suggests vendor/bundle)
    5. Run `rails generate hydra:install` 
    6. Update solr.yml and fedora.yml
+   7. Run `bundle package --all` for warbler's sake.
 
  * Additions to your project's gemfile:
 ```
