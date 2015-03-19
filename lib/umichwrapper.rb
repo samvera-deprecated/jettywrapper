@@ -127,12 +127,12 @@ class UMichwrapper
       tupac = self.instance
 
       # Params for Solr
-      tupac.solr_url = params[:solr_url] || "localhost:8080/solr-hydra"
+      tupac.solr_url = params[:solr_url] || "localhost:8080/tomcat/quod-dev/solr-hydra"
       tupac.solr_admin_url   = "#{tupac.solr_url}/admin" 
       tupac.solr_home = params[:solr_home] || "/quod-dev/idx/h/hydra-solr"
 
       # Params for Fedora
-      tupac.fedora_url = params[:fedora_url] || "localhost:8080/fedora"
+      tupac.fedora_url = params[:fedora_url] || "localhost:8080/tomcat/quod-dev/fedora"
       tupac.fedora_rest_url   = "#{tupac.fedora_url}/rest" 
 
       # Params for App Server
@@ -237,7 +237,7 @@ class UMichwrapper
       # Array of two elements [name string, info hash]
       return body["status"]
     else
-      logger.error("Core status query: #{target_url}")
+      logger.error("Core status query url: #{target_url}")
       logger.error("Core status query response error.  Response code #{resp.response_code}")
       return []
     end
@@ -396,6 +396,8 @@ class UMichwrapper
     
     # Return an empty array if request was not successful.
     if resp.response_code != 200
+      logger.error("Node child query url: #{target_url}")
+      logger.error("Node child query response error.  Response code #{resp.response_code}")
       return []
     end
 
