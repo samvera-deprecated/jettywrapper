@@ -136,9 +136,9 @@ class UMichwrapper
       tupac.fedora_rest_url   = "#{tupac.fedora_url}/rest" 
 
       # Params for App Server
-      tupac.tomcat_url = params[:tomcat_url]
-      tupac.tomcat_usr = params[:tomcat_usr]
-      tupac.tomcat_pwd = params[:tomcat_pwd]
+      tupac.tomcat_url = params[:tomcat_url] || "localhost:8080"
+      tupac.tomcat_usr = params[:tomcat_usr] || "tomcat-manager"
+      tupac.tomcat_pwd = params[:tomcat_pwd] || "YouNeedToChangeThisOrFaceThe401"
       tupac.startup_wait = params[:startup_wait] || 5
       tupac.dist_dir = params[:dist_dir] || "dist"
       tupac.app_base_path = params[:app_base_path] || "/tomcat/quod-dev/#{ENV['USER']}.quod.lib/hydra"
