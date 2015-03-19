@@ -5,7 +5,7 @@ development:
   fedora_url: localhost:8080/tomcat/quod-dev/fedora
   tomcat_url: localhost:8080
   tomcat_usr: tomcat-manager
-  tomcat_pwd: HereComesThe401.YouNeedToChangeThis
+  tomcat_pwd: HereComesThe401YouNeedToChangeThis
 
 testing:
   startup_wait: 29
