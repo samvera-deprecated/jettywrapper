@@ -75,6 +75,7 @@ gem 'slop', '< 4.0'
 
 # UMichwrapper
 gem 'umichwrapper', github: 'grosscol/umichwrapper', branch: 'master'
+gem 'jruby-openssl'
 
 # Preemptively require gems so that rails generate hydra:install will complete.
 #   This is a vendorized gems issue with Bundle.with_clean_env

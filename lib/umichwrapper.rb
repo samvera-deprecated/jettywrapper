@@ -123,9 +123,6 @@ class UMichwrapper
       solr_config   = parse_config_file(solr_file)   
       fedora_config = parse_config_file(fedora_file) 
 
-      #debug
-      logger.debug "SumConfig\n#{sum_config.inspect}"
-
       merge_logic = Proc.new do |key,old,new|  
         if old.is_a?(Hash) && new.is_a?(Hash)
           old.merge new
@@ -136,8 +133,8 @@ class UMichwrapper
 
       # Merge hashes overwritting with app_config where applicable 
       sum_config.merge! app_config, &merge_logic
-      sum_config.merge! solr_config, &merge_logic
-      sum_config.merge! fedora_config,  &merge_logic
+      #sum_config.merge! solr_config, &merge_logic
+      #sum_config.merge! fedora_config,  &merge_logic
 
       # Add the indifferent access magic from ActiveSupport.
       config = sum_config.with_indifferent_access
@@ -326,11 +323,12 @@ class UMichwrapper
     end
   end
 
-  def add_core()
+  def add_core
     # Get core instance dir for user/project
     cname = "#{ENV['USER']}-#{corename}"
     core_inst_dir = File.join( self.solr_home, ENV['USER'], cname )
 
+    logger.debug "Adding solr core #{cname}"
     # Check if core already exists
     cs = core_status
     instance_dirs =  cs.collect{ |arr| arr[1]["instanceDir"].chop }
@@ -387,7 +385,7 @@ class UMichwrapper
   # Add fedora node
   def add_node
     heads = { 'Content-Type' => "text/plain" }
-    nname ="#{ENV["USER"]}-#{nodename}" 
+    nname ="#{nodename}" 
     target_url = "#{self.fedora_rest_url}/#{ENV["USER"]}/#{nname}"
     
     # Create the node with a put call
@@ -400,7 +398,7 @@ class UMichwrapper
   def del_node
     # Delete the node
     heads = { 'Content-Type' => "text/plain" }
-    nname ="#{ENV["USER"]}-#{nodename}" 
+    nname ="#{nodename}" 
     target_url = "#{self.fedora_rest_url}/#{ENV["USER"]}/#{nname}"
     
     resp = Typhoeus.delete(target_url, headers: heads)
