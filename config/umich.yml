@@ -1,16 +1,17 @@
 development:
-  startup_wait: 59
-  solr_home:  /quod-dev/idx/h/hydra-solr
-  solr_url:   localhost:8080/tomcat/quod-dev/solr-hydra
-  fedora_url: localhost:8080/tomcat/quod-dev/fedora
-  tomcat_url: localhost:8080
-  tomcat_usr: tomcat-manager
-  tomcat_pwd: HereComesThe401YouNeedToChangeThis
+  startup_wait:   59
+  solr_home:      /quod-dev/idx/h/hydra-solr
+  solr_admin_url: localhost:8080/tomcat/quod-dev/solr-hydra
+  fedora_url:     localhost:8080/tomcat/quod-dev/fedora
+  tomcat_url:     localhost:8080
+  tomcat_usr:     tomcat-manager
+  tomcat_pwd:     HereComesThe401YouNeedToChangeThis
 
 testing:
-  startup_wait: 29
-  solr_url:   localhost:8080/quod-dev/hydra-solr
-  fedora_url: localhost:8080/quod-dev/fedora
-  tomcat_url: localhost:8080/manager
-  tomcat_usr: tomcat-manager
-  tomcat_pwd: HereComesThe401YouNeedToChangeThis
+  startup_wait:   29
+  solr_admin_url: localhost:8080/tomcat/quod-dev/solr-hydra
+  fedora_url:     localhost:8080/tomcat/quod-dev/fedora
+  fedora_url:     localhost:8080/quod-dev/fedora
+  tomcat_url:     localhost:8080/manager
+  tomcat_usr:     tomcat-manager
+  tomcat_pwd:     HereComesThe401YouNeedToChangeThis

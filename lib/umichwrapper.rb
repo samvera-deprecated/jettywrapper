@@ -18,7 +18,7 @@ class UMichwrapper
   include Singleton
 
   attr_accessor :startup_wait # How many seconds to wait for jetty to spin up. Default is 5.
-  attr_accessor :fedora_url, :solr_url
+  attr_accessor :fedora_url, :solr_admin_url
   attr_accessor :tomcat_url, :tomcat_usr, :tomcat_pwd
   attr_accessor :solr_admin_url, :fedora_rest_url, :tomcat_admin_url
   attr_accessor :solr_core_name, :fedora_node_path
@@ -76,35 +76,66 @@ class UMichwrapper
       'development'
     end
 
+    def parse_config_file( infile )
+      # If there is not file, return an empty config
+      if File.exist?( infile ) == false
+        return Hash.new.with_indifferent_access
+      end
+
+      # Attempt erb parse
+      begin
+        in_erb = ERB.new(IO.read(infile)).result(binding)
+      rescue
+        raise("#{infile} was found, but could not be parsed with ERB. \n#{$!.inspect}")
+      end
+
+      # Parse results as yaml
+      begin
+        in_yml = YAML::load(in_erb)
+      rescue
+        raise("#{infile} was found, but could not be parsed.\n")
+      end
+
+      # Check the result
+      if in_yml.nil? || !in_yml.is_a?(Hash)
+        raise("#{infile} was found, but was blank or malformed.\n")
+      end
+
+      in_yml.with_indifferent_access
+    end
+
+    # Load default config.  Overwrite with found configuration
     def load_config(config_name = env() )
       @env = config_name
       logger.info "Load config.  @env = #{@env}."
-      umich_file = "#{app_root}/config/umich.yml"
+      default_file = File.expand_path("../config/umich.yml", File.dirname(__FILE__))
+      app_file     = "#{app_root}/config/umich.yml"
+      fedora_file  = "#{app_root}/config/solr.yml"
+      solr_file    = "#{app_root}/config/fedora.yml"
 
-      unless File.exists?(umich_file)
-        logger.warn "Did not find umichwrapper config file #{umich_file}. Using default file instead."
-        umich_file = File.expand_path("../config/umich.yml", File.dirname(__FILE__))
-      end
+      umich_file   = "#{app_root}/config/umich.yml"
 
-      begin
-        umich_erb = ERB.new(IO.read(umich_file)).result(binding)
-      rescue
-        raise("umich.yml was found, but could not be parsed with ERB. \n#{$!.inspect}")
-      end
+      # Read default config endogenous to this gem
+      sum_config = parse_config_file( default_file )
 
-      begin
-        umich_yml = YAML::load(umich_erb)
-      rescue
-        raise("umich.yml was found, but could not be parsed.\n")
-      end
+      # Read additional possible configs from app config
+      app_config    = parse_config_file(app_file)    
+      solr_config   = parse_config_file(solr_file)   
+      fedora_config = parse_config_file(fedora_file) 
 
-      if umich_yml.nil? || !umich_yml.is_a?(Hash)
-        raise("umich.yml was found, but was blank or malformed.\n")
-      end
+      logger.debug("App config empty") if app_config.empty?
+      logger.debug("Solr config empty") if solr_config.empty?
+      logger.debug("Fedora config empty") if fedora_config.empty?
 
-      config = umich_yml.with_indifferent_access
-      config[config_name] || config['default'.freeze]
+      # Merge hashes overwritting with app_config where applicable 
+      sum_config.merge! app_config 
+      sum_config.merge! solr_config 
+      sum_config.merge! fedora_config 
+
+
+      sum_config[config_name] || sum_config['default'.freeze]
     end
+
 
     # Set the parameters for the instance.
     # @note tupac represents the one and only wrapper instance.
@@ -119,7 +150,7 @@ class UMichwrapper
     #   :fedora_port
     #
     #   :fedora_url the user specific url which will have test|dev appended.
-    #   :solr_url   the user specific url which will have test|dev appended.
+    #   :solr_admin_url   the user specific url which will have test|dev appended.
     #
     #   :startup_wait How many seconds to wait before starting tests. Deployment may take a while.
     def configure(params)
@@ -127,8 +158,8 @@ class UMichwrapper
       tupac = self.instance
 
       # Params for Solr
-      tupac.solr_url = params[:solr_url] || "localhost:8080/tomcat/quod-dev/solr-hydra"
-      tupac.solr_admin_url   = "#{tupac.solr_url}/admin" 
+      tupac.solr_admin_url = params[:solr_admin_url] || "localhost:8080/tomcat/quod-dev/solr-hydra"
+      tupac.solr_admin_url   = "#{tupac.solr_admin_url}/admin" 
       tupac.solr_home = params[:solr_home] || "/quod-dev/idx/h/hydra-solr"
 
       # Params for Fedora
@@ -154,7 +185,7 @@ class UMichwrapper
 
     def print_status(params = {})
       tupac = configure( params )
-      puts "solr_url:       #{tupac.solr_url}"
+      puts "solr_admin_url: #{tupac.solr_admin_url}"
       puts "fedora_url:     #{tupac.fedora_url}"
       puts "--"
       puts "tomcat_url:     #{tupac.tomcat_url}"
@@ -418,7 +449,6 @@ class UMichwrapper
 
     if resp.response_code == 401
       logger.error "Tomcat: 401 authentication not accepted.  Check tomcat_user and tomcat_pwd in config."
-      return false
     end
 
     # Return true if the response was OK and the app_path was found in the string.
