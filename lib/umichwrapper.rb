@@ -101,7 +101,7 @@ class UMichwrapper
         raise("#{infile} was found, but was blank or malformed.\n")
       end
 
-      in_yml.with_indifferent_access
+      in_yml
     end
 
     # Load default config.  Overwrite with found configuration
@@ -123,17 +123,25 @@ class UMichwrapper
       solr_config   = parse_config_file(solr_file)   
       fedora_config = parse_config_file(fedora_file) 
 
-      logger.debug("App config empty") if app_config.empty?
-      logger.debug("Solr config empty") if solr_config.empty?
-      logger.debug("Fedora config empty") if fedora_config.empty?
+      #debug
+      logger.debug "SumConfig\n#{sum_config.inspect}"
+
+      merge_logic = Proc.new do |key,old,new|  
+        if old.is_a?(Hash) && new.is_a?(Hash)
+          old.merge new
+        else
+          new
+        end
+      end
 
       # Merge hashes overwritting with app_config where applicable 
-      sum_config.merge! app_config 
-      sum_config.merge! solr_config 
-      sum_config.merge! fedora_config 
+      sum_config.merge! app_config, &merge_logic
+      sum_config.merge! solr_config, &merge_logic
+      sum_config.merge! fedora_config,  &merge_logic
 
-
-      sum_config[config_name] || sum_config['default'.freeze]
+      # Add the indifferent access magic from ActiveSupport.
+      config = sum_config.with_indifferent_access
+      config[config_name] || config['default'.freeze]
     end
 
 
