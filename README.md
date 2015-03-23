@@ -84,7 +84,7 @@ gem 'warden'
 gem 'devise'
 gem 'devise-guests', '~> 0.3'
 gem 'bcrypt'
-gem 'thread-safe'
+gem 'thread_safe'
 ```
 
  * If the gems are not installed preemptively, running `rails generate hydra:install` barfs during the `generate blacklight:install` phase with errors about gems not being found.
