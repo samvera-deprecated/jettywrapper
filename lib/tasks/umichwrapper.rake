@@ -13,6 +13,7 @@ namespace :umich do
 
   desc "Build war file."
   task :build => ["dist","config"] do
+    puts "Buiding war file."
     # copy config/warble if doesn't exist
     local_config = File.join 'config', 'warble.rb'
     if File.exist?(local_config ) == false
