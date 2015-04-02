@@ -12,13 +12,11 @@ Change directory into your new project `cd myproject`
 Adding the UMichwrapper github repo to your rails project's Gemfile and using bundle install should make the umich tasks available to rake:
 ```
 # UMichwrapper
-gem 'umichwrapper', github: 'grosscol/umichwrapper', branch: 'master'
-# Hackish fix for warbler issue with jruby-openssl
-gem 'jruby-openssl'
+gem 'umichwrapper', github: 'mlibrary/umichwrapper', branch: 'master'
 ``` 
 Run bundle install `bundle install --path=.bundle`
 
-Run bundle pacakge `bundle package --all` because warbler.
+Run bundle pacakge `bundle package --all` to allow warbler to package all the requirements.
 
 Verify umich tasks are available with `bundle exec rake --tasks`
 
@@ -74,7 +72,7 @@ gem 'hydra', '9.0.0'
 gem 'slop', '< 4.0'
 
 # UMichwrapper
-gem 'umichwrapper', github: 'grosscol/umichwrapper', branch: 'master'
+gem 'umichwrapper', github: 'mlibrary/umichwrapper', branch: 'master'
 gem 'jruby-openssl'
 
 # Preemptively require gems so that rails generate hydra:install will complete.
