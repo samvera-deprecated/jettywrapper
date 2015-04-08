@@ -201,6 +201,7 @@ class UMichwrapper
       puts "app_name:       #{tupac.app_name}"
       puts "app_root:       #{UMichwrapper.app_root}"
       puts "-- Application  --"
+      puts "app_path:       #{tupac.app_base_path}/#{tupac.app_name}"
       puts "solr running:   #{tupac.solr_running?|| 'false'}"
       puts "app deployed:   #{tupac.is_deployed? || 'false'}"
 
