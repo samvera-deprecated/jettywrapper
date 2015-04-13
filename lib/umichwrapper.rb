@@ -383,14 +383,15 @@ class UMichwrapper
     return resp.response_code == 301
   end
 
-  # Add fedora node
+  # Add fedora container node
   def add_node
-    heads = { 'Content-Type' => "text/plain" }
     nname ="#{nodename}" 
+    heads = { 'Content-Type' => "text/turtle" }
+    bodyrdf = "PREFIX dc: <http://purl.org/dc/elements/1.1/> <> dc:title \"#{nname}-root\""
     target_url = "#{self.fedora_rest_url}/#{ENV["USER"]}/#{nname}"
     
     # Create the node with a put call
-    resp = Typhoeus.put(target_url, headers: heads)
+    resp = Typhoeus.put(target_url, headers: heads, body: bodyrdf)
 
     logger.info "Add node [#{nname}] response: #{resp.response_code}."
   end
