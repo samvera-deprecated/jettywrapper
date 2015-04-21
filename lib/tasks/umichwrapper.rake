@@ -48,6 +48,11 @@ namespace :umich do
     end
   end
 
+  desc "Setup solr core and fedora node."
+  task :setup => :environment do
+    UMichwrapper.setup(UMICH_CONFIG)
+  end
+
   desc "Print the app status and environment config."
   task :status => :environment do
     UMichwrapper.print_status(UMICH_CONFIG)

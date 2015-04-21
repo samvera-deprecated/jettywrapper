@@ -211,15 +211,21 @@ class UMichwrapper
       tupac.node_childs.each{|c| puts "#{c["@id"]}" }
     end
 
-    # Convenience method for configuring and starting jetty with one command
-    # @param [Hash] params: The configuration to use for starting jetty
-    # @example
-    #    UMichwrapper.start(:jetty_home => '/path/to/jetty', :jetty_port => '8983')
+    # Convenience method for configuring solr & fedora and deploying application with one command
+    # @param [Hash] params: The configuration 
     def start(params)
       UMichwrapper.configure(params)
       UMichwrapper.instance.add_core
       UMichwrapper.instance.add_node
       UMichwrapper.instance.deploy_app
+      return UMichwrapper.instance
+    end
+
+    # Convenience method for create solr core and fedora node
+    def setup(params)
+      UMichwrapper.configure(params)
+      UMichwrapper.intstance.add_core
+      UMichwrapper.intstance.add_node
       return UMichwrapper.instance
     end
 
