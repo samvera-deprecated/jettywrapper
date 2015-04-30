@@ -224,8 +224,8 @@ class UMichwrapper
     # Convenience method for create solr core and fedora node
     def setup(params)
       UMichwrapper.configure(params)
-      UMichwrapper.intstance.add_core
-      UMichwrapper.intstance.add_node
+      UMichwrapper.instance.add_core
+      UMichwrapper.instance.add_node
       return UMichwrapper.instance
     end
 
@@ -348,12 +348,13 @@ class UMichwrapper
 
     # File operation to copy dir and files from template
     # Check for solr_cores/corename template in current directory
-    if Dir.exist? File.join("solr_coresn", corename)
+    if Dir.exist? File.join("solr_cores", corename)
       logger.info "Using project solr_cores template."
       src  = File.join("solr_cores", corename)
     else
       logger.info "Using default solr_cores template."
-      src  = File.join( File.expand_path("../../solr_cores", __FILE__), corename )
+      # Make sure src directory ends with trailing file separator so cp_r operates as expected
+      src  = File.join( File.expand_path("../../solr_cores", __FILE__), corename, '' )
     end
     
     # Create core_inst_dir directory parent on the file system.
