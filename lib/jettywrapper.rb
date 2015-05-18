@@ -14,7 +14,6 @@ require 'zip'
 
 Dir[File.expand_path(File.join(File.dirname(__FILE__),"tasks/*.rake"))].each { |ext| load ext } if defined?(Rake)
 
-# Jettywrapper is a Singleton class, so you can only create one jetty instance at a time.
 class Jettywrapper
 
   include ActiveSupport::Benchmarkable
@@ -30,26 +29,25 @@ class Jettywrapper
   attr_accessor :java_version # Minimum java version
   attr_accessor :jetty_opts   # Options to pass to jetty (ex. ["etc/my_jetty.xml", "etc/other.xml"] as in http://wiki.eclipse.org/Jetty/Reference/jetty.xml_usage
 
-  # configure the singleton with some defaults
   def initialize(params = {})
     self.base_path = self.class.app_root
     configure(params)
   end
 
   def configure params
-    self.quiet = params[:quiet].nil? ? true : params[:quiet]
-    self.jetty_home = params[:jetty_home] || File.expand_path(File.join(self.base_path, 'jetty'))
-    self.solr_home = params[:solr_home]  || File.join( self.jetty_home, "solr")
-    self.port = params[:jetty_port] || 8888
+    self.quiet        = params[:quiet].nil? ? true : params[:quiet]
+    self.jetty_home   = params[:jetty_home  ] || File.expand_path(File.join(self.base_path, 'jetty'))
+    self.solr_home    = params[:solr_home   ] || File.join( self.jetty_home, "solr")
+    self.port         = params[:jetty_port  ] || 8888
     self.startup_wait = params[:startup_wait] || 5
-    self.java_opts = params[:java_opts] || []
+    self.java_opts    = params[:java_opts   ] || []
     self.java_command = params[:java_command] || default_java_command
     self.java_version = params[:java_version]
-    self.jetty_opts = params[:jetty_opts] || []
+    self.jetty_opts   = params[:jetty_opts  ] || []
   end
 
   # Methods inside of the class << self block can be called directly on Jettywrapper, as class methods.
-  # Methods outside the class << self block must be called on Jettywrapper.instance, as instance methods.
+  # Methods outside the class << self block must be called on Jettywrapper.instance or a Jettywrapper object, as instance methods.
   class << self
 
     attr_writer :hydra_jetty_version, :url, :tmp_dir, :jetty_dir, :env
