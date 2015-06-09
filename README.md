@@ -48,7 +48,6 @@ UMichwrapper starts by looking for config/umich.yml in your project.  Failing th
    4. Run `bundle install --path=.bundle` (bundler suggests vendor/bundle)
    5. Run `rails generate hydra:install` 
    6. Configure solr.yml and fedora.yml.  The default values won't work.
-   7. Run `bundle package --all` for warbler's sake.
 
  * Additions to your project's gemfile:
 ```
