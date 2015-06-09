@@ -17,15 +17,10 @@ class UMichwrapper
 
   include Singleton
 
-  attr_accessor :startup_wait # How many seconds to wait for jetty to spin up. Default is 5.
-  attr_accessor :fedora_url, :solr_admin_url
-  attr_accessor :tomcat_url, :tomcat_usr, :tomcat_pwd
-  attr_accessor :solr_admin_url, :fedora_rest_url, :tomcat_admin_url
+  attr_accessor :solr_admin_url, :fedora_url, :fedora_rest_url
   attr_accessor :solr_core_name, :fedora_node_path
   attr_accessor :solr_home # Home directory for solr. Cores get added here.
-  attr_accessor :app_name, :app_base_path
-  attr_accessor :dist_dir
-  attr_accessor :base_path
+  attr_accessor :base_path # Base path of the application.
 
   # configure the singleton with some defaults
   def initialize(params = {})
@@ -36,16 +31,16 @@ class UMichwrapper
   # Methods outside the class << self block must be called on UMichwrapper.instance, as instance methods.
   class << self
 
-    attr_writer :hydra_jetty_version, :env
+    attr_writer :umichwrapper_version, :env
 
-    def hydra_jetty_version
-      @hydra_jetty_version ||= 'v7.0.0'
+    def umichwrapper_version
+      @umichwrapper_version ||= 'v1.0.0'
     end
 
     def reset_config
       @app_root = nil
       @env = nil
-      @hydra_jetty_version = nil
+      @umichwrapper_version = nil
     end
 
     def app_root
@@ -133,8 +128,6 @@ class UMichwrapper
 
       # Merge hashes overwritting with app_config where applicable 
       sum_config.merge! app_config, &merge_logic
-      #sum_config.merge! solr_config, &merge_logic
-      #sum_config.merge! fedora_config,  &merge_logic
 
       # Add the indifferent access magic from ActiveSupport.
       config = sum_config.with_indifferent_access
@@ -156,8 +149,6 @@ class UMichwrapper
     #
     #   :fedora_url the user specific url which will have test|dev appended.
     #   :solr_admin_url   the user specific url which will have test|dev appended.
-    #
-    #   :startup_wait How many seconds to wait before starting tests. Deployment may take a while.
     def configure(params)
       params ||= {}
       tupac = self.instance
@@ -171,16 +162,6 @@ class UMichwrapper
       tupac.fedora_url = params[:fedora_url] || "localhost:8080/tomcat/quod-dev/fedora"
       tupac.fedora_rest_url   = "#{tupac.fedora_url}/rest" 
 
-      # Params for App Server
-      tupac.tomcat_url = params[:tomcat_url] || "localhost:8080"
-      tupac.tomcat_usr = params[:tomcat_usr] || "tomcat-manager"
-      tupac.tomcat_pwd = params[:tomcat_pwd] || "YouNeedToChangeThisOrFaceThe401"
-      tupac.startup_wait = params[:startup_wait] || 5
-      tupac.dist_dir = params[:dist_dir] || "dist"
-      tupac.app_base_path = params[:app_base_path] || "/tomcat/quod-dev/#{ENV['USER']}.quod.lib/hydra"
-      # Discovered Parameters
-      tupac.app_name   = params[:app_name]   || File.basename( tupac.base_path )
-
       # Params without required defaults.
       tupac.solr_core_name = params[:solr_core_name]
       tupac.fedora_node_path = params[:fedora_node_path]
@@ -191,34 +172,13 @@ class UMichwrapper
     def print_status(params = {})
       tupac = configure( params )
       puts "solr_admin_url: #{tupac.solr_admin_url}"
-      puts "fedora_url:     #{tupac.fedora_url}"
-      puts "--"
-      puts "tomcat_url:     #{tupac.tomcat_url}"
-      puts "tomcat_usr:     #{tupac.tomcat_usr}"
-      puts "tomcat_pwd:     #{tupac.tomcat_pwd}"
-      puts "--"
-      puts "startup_wait:   #{tupac.startup_wait}"
-      puts "app_name:       #{tupac.app_name}"
-      puts "app_root:       #{UMichwrapper.app_root}"
-      puts "-- Application  --"
-      puts "app_path:       #{tupac.app_base_path}/#{tupac.app_name}"
       puts "solr running:   #{tupac.solr_running?|| 'false'}"
-      puts "app deployed:   #{tupac.is_deployed? || 'false'}"
+      puts "fedora_url:     #{tupac.fedora_url}"
 
       puts "-- Solr Cores   --"
       tupac.core_status.each{|core, info| puts "#{info["instanceDir"]} :: #{core}"}
       puts "-- Fedora Nodes --"
       tupac.node_childs.each{|c| puts "#{c["@id"]}" }
-    end
-
-    # Convenience method for configuring solr & fedora and deploying application with one command
-    # @param [Hash] params: The configuration 
-    def start(params)
-      UMichwrapper.configure(params)
-      UMichwrapper.instance.add_core
-      UMichwrapper.instance.add_node
-      UMichwrapper.instance.deploy_app
-      return UMichwrapper.instance
     end
 
     # Convenience method for create solr core and fedora node
@@ -229,30 +189,11 @@ class UMichwrapper
       return UMichwrapper.instance
     end
 
-    def deploy(params)
-      UMichwrapper.configure(params)
-      UMichwrapper.instance.deploy_app
-    end
-
     def clean(params)
       UMichwrapper.configure(params)
       UMichwrapper.instance.del_core
       UMichwrapper.instance.del_node
-      UMichwrapper.instance.stop
       return UMichwrapper.instance
-    end
-
-    # Convenience method for configuring and starting jetty with one command. Note
-    # that for stopping, only the :jetty_home value is required (including other values won't
-    # hurt anything, though).
-    # @param [Hash] params: The jetty_home to use for stopping jetty
-    # @return [UMichwrapper.instance]
-    # @example
-    #    UMichwrapper.stop_with_params(:jetty_home => '/path/to/jetty')
-    def stop(params)
-       UMichwrapper.configure(params)
-       UMichwrapper.instance.stop
-       return UMichwrapper.instance
     end
 
     def logger=(logger)
@@ -361,7 +302,7 @@ class UMichwrapper
     FileUtils.mkdir_p( File.expand_path("..", core_inst_dir) )
 
     # Copy contents of template source to core instance directory
-    FileUtils.cp_r(src, core_inst_dir)
+    FileUtils.cp_r(src, core_inst_dir, remove_destination: true)
     logger.info "Core template: #{src}"
     logger.info "Core instance: #{core_inst_dir}"
 
@@ -456,89 +397,4 @@ class UMichwrapper
     self.class.logger
   end
 
-  def is_deployed?
-    app_path = "#{self.app_base_path}/#{self.app_name}"
-    target_url = "#{self.tomcat_url}/manager/text/list"
-    upwd = "#{self.tomcat_usr}:#{self.tomcat_pwd}"
-    resp = Typhoeus.get(target_url, userpwd: upwd)
-
-    if resp.response_code == 401
-      logger.error "Tomcat: 401 authentication not accepted.  Check tomcat_user and tomcat_pwd in config."
-    end
-
-    # Return true if the response was OK and the app_path was found in the string.
-    return resp.response_code == 200 && resp.body.match(app_path)
-
-  end
-
-  # Deploy war file to tomcat application server using management api
-  #
-  def deploy_app
-    war_path = File.absolute_path File.join("dist", "demoname.war")
-    app_name = self.app_name
-
-    logger.info "Deploying application using the following parameters: "
-    logger.info "  app_name: #{app_name}"
-    logger.info "  war_path: #{war_path}"
-
-    # parameters for api call
-    upwd = "#{self.tomcat_usr}:#{self.tomcat_pwd}"
-    target_url = "#{self.tomcat_url}/manager/text/deploy"
-    vars = {war: "file:/#{war_path}", path: "#{self.app_base_path}/#{self.app_name}" }
-
-    # Check if this is deployed on the tomcat server
-    # and update & restart
-    if File.exist?(war_path) == false
-      logger.error "War file does not exist.  Aborting deployment."
-    elsif is_deployed?
-      logger.info "Application already deployed on tomcat.  Updating."
-      vars[:update]="true"
-      resp = Typhoeus.get(target_url, userpwd: upwd, params: vars)
-      logger.info "Response: #{resp.body}"
-    else
-      resp = Typhoeus.get(target_url, userpwd: upwd, params: vars )
-      logger.info "Response: #{resp.body}"
-    end
-    
-  end
-
-  # Wait for the jetty server to start and begin listening for requests
-  def startup_wait!
-    count = 0
-    logger.info "Waiting for application to deploy..."
-    begin
-    Timeout::timeout(self.startup_wait) do
-      while is_deployed? == false do
-        count = count + 1
-        sleep 10
-      end
-    end
-    rescue Timeout::Error
-      logger.warn "App not deployed after #{self.startup_wait * 10} seconds. Continuing anyway."
-    end
-
-    logger.info "App deployed after #{count} seconds."
-  end
-
-  # Instance stop method. Must be called on UMichwrapper.instance
-  # You're probably better off using UMichwrapper.stop(:jetty_home => "/path/to/jetty")
-  # @example
-  #    UMichwrapper.configure(params)
-  #    UMichwrapper.instance.stop
-  #    return UMichwrapper.instance
-  def stop
-    app_name = self.app_name
-
-    upwd = "#{self.tomcat_usr}:#{self.tomcat_pwd}"
-    target_url = "#{self.tomcat_url}/manager/text/undeploy"
-    vars = {path: "/tomcat/quod-dev/#{ENV['USER']}.quod.lib/hydra/#{app_name}" }
-
-    if is_deployed?
-      logger.info "Undeploying application: #{app_name}"
-      resp = Typhoeus.get(target_url, userpwd: upwd, params: vars )
-      logger.info "Response: #{resp.body}"
-    else
-      logger.info "Application #{app_name} not currently deployed."
-    end
-  end
 end
