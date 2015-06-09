@@ -302,7 +302,7 @@ class UMichwrapper
     FileUtils.mkdir_p( File.expand_path("..", core_inst_dir) )
 
     # Copy contents of template source to core instance directory
-    FileUtils.cp_r(src, core_inst_dir)
+    FileUtils.cp_r(src, core_inst_dir, remove_destination: true)
     logger.info "Core template: #{src}"
     logger.info "Core instance: #{core_inst_dir}"
 
