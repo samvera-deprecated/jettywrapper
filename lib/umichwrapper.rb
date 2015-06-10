@@ -189,6 +189,12 @@ class UMichwrapper
       return UMichwrapper.instance
     end
 
+    def solr_only(params)
+      UMichwrapper.configure(params)
+      UMichwrapper.instance.add_core
+      return UMichwrapper.instance
+    end
+
     def clean(params)
       UMichwrapper.configure(params)
       UMichwrapper.instance.del_core

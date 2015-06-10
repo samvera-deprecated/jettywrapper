@@ -22,6 +22,11 @@ namespace :umich do
     UMichwrapper.setup(UMICH_CONFIG)
   end
 
+  desc "Setup solr core only."
+  task :solr => :environment do
+    UMichwrapper.solr_only(UMICH_CONFIG)
+  end
+
   desc "Print the app status and environment config."
   task :status => :environment do
     UMichwrapper.print_status(UMICH_CONFIG)
