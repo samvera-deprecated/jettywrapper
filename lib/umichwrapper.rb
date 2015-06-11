@@ -381,7 +381,7 @@ class UMichwrapper
 
   def node_childs()
     heads = { 'Accept' => "application/ld+json" }
-    target_url = "#{self.fedora_rest_url}/#{ENV["USER"]}"
+    target_url = self.fedora_rest_url
     
     resp = Typhoeus.get(target_url, headers: heads)
     
