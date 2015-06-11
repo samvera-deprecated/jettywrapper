@@ -259,14 +259,14 @@ class UMichwrapper
   end
 
   def corename
-    name = self.solr_core_name || env_fullname( UMichwrapper.env )
+    name = self.solr_core_name || "#{ENV['USER']}-#{env_name(UMichwrapper.env)}"
   end
 
   def nodename
-    name = self.fedora_node_path || env_fullname( UMichwrapper.env )
+    name = self.fedora_node_path || "#{ENV['USER']}-#{env_name(UMichwrapper.env)}"
   end
 
-  def env_fullname( env )
+  def env_name( env )
     case env
     when /^dev(elopment)?/i
       "dev"
@@ -279,17 +279,16 @@ class UMichwrapper
 
   def add_core
     # Get core instance dir for user/project
-    cname = "#{ENV['USER']}-#{corename}"
-    core_inst_dir = File.join( self.solr_home, ENV['USER'], cname )
+    core_inst_dir = File.join( self.solr_home, ENV['USER'], corename )
 
-    logger.debug "Adding solr core #{cname}"
-    # Check if core already exists
+    logger.debug "Adding solr core #{corename}"
+    # Check if core instance directory already exists
     cs = core_status
     instance_dirs =  cs.collect{ |arr| arr[1]["instanceDir"].chop }
 
-    # Short circut if core already exists in Solr instance.
+    # Short circut if core instance directory already exists.
     if instance_dirs.include? core_inst_dir
-      logger.info "Core #{cname} alerady exists."
+      logger.info "Directory for #{corename} alerady exists."
       return
     end
 
@@ -316,7 +315,7 @@ class UMichwrapper
     # Sometimes core discovery is flakey, so ignore an error response here.
     vars = {
       action: "CREATE",
-      name: cname,
+      name: corename,
       instanceDir: core_inst_dir,
       wt: "json"}
 
@@ -327,7 +326,7 @@ class UMichwrapper
     if body["error"]
       logger.warn body["error"]
     else
-      logger.info "Core [#{cname}] added."
+      logger.info "Core [#{corename}] added."
     end
   end
 
@@ -373,8 +372,7 @@ class UMichwrapper
   # Check if fedora node exists
   def node_exists?
     heads = { 'Content-Type' => "text/plain" }
-    nname ="#{ENV["USER"]}-#{nodename}" 
-    target_url = "#{self.fedora_rest_url}/#{ENV["USER"]}/#{nname}"
+    target_url = "#{self.fedora_rest_url}/#{nodename}"
     
     resp = Typhoeus.get(target_url, headers: heads)
 
