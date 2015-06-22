@@ -27,6 +27,11 @@ namespace :umich do
     UMichwrapper.solr_only(UMICH_CONFIG)
   end
 
+  desc "Setup fedora node only."
+  task :fedora => :environment do
+    UMichwrapper.fedora_only(UMICH_CONFIG)
+  end
+
   desc "Print the app status and environment config."
   task :status => :environment do
     UMichwrapper.print_status(UMICH_CONFIG)

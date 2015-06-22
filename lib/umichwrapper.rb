@@ -195,6 +195,12 @@ class UMichwrapper
       return UMichwrapper.instance
     end
 
+    def fedora_only(params)
+      UMichwrapper.configure(params)
+      UMichwrapper.instance.add_node
+      return UMichwrapper.instance
+    end
+
     def clean(params)
       UMichwrapper.configure(params)
       UMichwrapper.instance.del_core
@@ -234,11 +240,10 @@ class UMichwrapper
   end
 
   def del_core
-    cname = "#{ENV['USER']}-#{corename}"
     # API call to unload core with Solr instance.
     vars = {
       action: "UNLOAD",
-      core: cname,
+      core: corename,
       wt: "json"}
 
     target_url = "#{self.solr_admin_url}/cores"
@@ -248,11 +253,11 @@ class UMichwrapper
     if body["error"]
       logger.warn body["error"]
     else
-      logger.info "Core [#{cname}] unloaded."
+      logger.info "Core [#{corename}] unloaded."
     end
 
     # Remove core directory from file system
-    core_inst_dir = File.join( self.solr_home, ENV['USER'], cname )
+    core_inst_dir = File.join( self.solr_home, ENV['USER'], corename )
     logger.info "Deleting dir: #{core_inst_dir}"
 
     FileUtils.rm_rf( core_inst_dir )
@@ -304,7 +309,9 @@ class UMichwrapper
     end
     
     # Create core_inst_dir directory parent on the file system.
-    FileUtils.mkdir_p( File.expand_path("..", core_inst_dir) )
+    core_inst_dir_parent = File.expand_path("..", core_inst_dir) 
+    binding.pry
+    FileUtils.mkdir_p( core_inst_dir_parent )
 
     # Copy contents of template source to core instance directory
     FileUtils.cp_r(src, core_inst_dir, remove_destination: true)
@@ -338,35 +345,33 @@ class UMichwrapper
 
   # Add fedora container node
   def add_node
-    nname ="#{nodename}" 
     heads = { 'Content-Type' => "text/turtle" }
-    bodyrdf = "PREFIX dc: <http://purl.org/dc/elements/1.1/> <> dc:title \"#{nname}-root\""
-    target_url = "#{self.fedora_rest_url}/#{ENV["USER"]}/#{nname}"
+    bodyrdf = "PREFIX dc: <http://purl.org/dc/elements/1.1/> <> dc:title \"#{nodename}-root\""
+    target_url = "#{self.fedora_rest_url}/#{nodename}"
     
     # Create the node with a put call
     resp = Typhoeus.put(target_url, headers: heads, body: bodyrdf)
 
-    logger.info "Add node [#{nname}] response: #{resp.response_code}."
+    logger.info "Add node [#{nodename}] response: #{resp.response_code}."
   end
 
   # Delete fedora node
   def del_node
     # Delete the node
     heads = { 'Content-Type' => "text/plain" }
-    nname ="#{nodename}" 
-    target_url = "#{self.fedora_rest_url}/#{ENV["USER"]}/#{nname}"
+    target_url = "#{self.fedora_rest_url}/#{nodename}"
     
     resp = Typhoeus.delete(target_url, headers: heads)
 
     # 204 for success 404 for already deleted
-    logger.info "Delete node [#{nname}] response code: #{resp.response_code}. "
+    logger.info "Delete node [#{nodename}] response code: #{resp.response_code}. "
 
     # Delete tombstone
-    target_url = "#{self.fedora_rest_url}/#{ENV["USER"]}/#{nname}/fcr:tombstone"
+    target_url = "#{self.fedora_rest_url}/#{nodename}/fcr:tombstone"
     resp = Typhoeus.delete(target_url, headers: heads)
 
     # 204 for success. 404 for already deleted.
-    logger.info "Delete tombstone for [#{nname}] response code: #{resp.response_code}. "
+    logger.info "Delete tombstone for [#{nodename}] response code: #{resp.response_code}. "
   end
 
   # Check if fedora node exists
