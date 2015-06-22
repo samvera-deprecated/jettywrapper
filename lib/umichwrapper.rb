@@ -310,7 +310,6 @@ class UMichwrapper
     
     # Create core_inst_dir directory parent on the file system.
     core_inst_dir_parent = File.expand_path("..", core_inst_dir) 
-    binding.pry
     FileUtils.mkdir_p( core_inst_dir_parent )
 
     # Copy contents of template source to core instance directory
