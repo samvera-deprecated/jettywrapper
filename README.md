@@ -2,7 +2,6 @@
 
 This gem is a poorly done hack of Jettwrapper.  It is designed as a replacement for Jettywrapper in the shared dev environment at the Univerisity of Michigan Library.  This provides the setup tasks for getting a developer solr core and fedora node running on the shared infrastructure.  It does not provide the convenient start/stop functionality that Jettywrapper provides to automate testing.
 
-
 ## Use
 
 Create a new rails project `rails new --skip-bundle myproject`
@@ -26,28 +25,31 @@ Use `bundle exec rake umich:setup` prior to running your rails server.
 
 **Make sure that your project's config directory (config/*) is included in .gitignore:** 
 
-Good practice, common sense, and decency to sysadmins dictates that you omit your local configuration from your git repository.
+Good practice, common sense, and decency to sysadmins all suggest that you omit your local configuration from your git repository.
 
-UMichwrapper starts by looking for config/umich.yml in your project.  Failing that, it uses the umich.yml in the gem's config directory.  The defaults are set up to work in the UMich dev deoployment. 
+UMichwrapper starts by looking for fedora.yml, solr.yml, and umich.yml in your project's config directory.  Failing that, it uses the umich.yml in the gem's config directory.  The defaults are set up to work in the UMich dev deoployment. 
 
 ## Notes
 
- * This gem does not yet read from solr.yml and fedora.yml in your project config.  For hydra, those do need to point to the corresponding solr and fedora instance/context.  Currently keeping these both configured is on the developer.  Having the UMichwrapper read the solr and fedora configs of your project is next on the list to be implemented.
  * The unit and integration tests have yet to be completed. 
  * This gem does not yet support facilitating testing in the same way that jettywrapper does.
 
 ## Dive into Hydra idiosyncracies
 
  * In order to start a dive-into-hydra project:
-   1. Use `rails new <project name> --skip-bundle` otherwise you'll be prompted for you sudo pw 
-   2. Change directory into your project dir.
-   3. Make the additions to the Gemfile (see below for copy/pastable)
-     * add hydra dependency.
-     * add umichwrapper depenency.
-     * add preemptive dependencies to work around a bundler related issue.
-   4. Run `bundle install --path=.bundle` (bundler suggests vendor/bundle)
-   5. Run `rails generate hydra:install` 
-   6. Configure solr.yml and fedora.yml.  The default values won't work.
+    1. `mkdir <project_name>`
+    1. `cd <project_name>`
+    1. `bundle init`
+    1. `echo "gem 'rails', '~> 4.2'" >> Gemfile`
+    1. `bundle install`
+    1. `bundle exec rails new . -f`
+    1. Make the additions to the Gemfile (see below for copy/pastable)
+      * add hydra dependency.
+      * add umichwrapper depenency.
+      * add preemptive dependencies to work around a bundler related issue.
+    1. `bundle install`
+    1. `rails generate hydra:install` 
+    1. Configure solr.yml and fedora.yml.  The default values won't work.
 
  * Additions to your project's gemfile:
 ```
@@ -71,8 +73,8 @@ gem 'thread_safe'
 fedora.yml
 ```
 development:
-  url: http://localhost:8080/tomcat/quod-dev/fedora/rest
-  base_path: /uniquename/dev
+  url: http://localhost:8080/fedora/rest
+  base_path: /uniquename-dev
 ```
 solr.yml
 ```

@@ -1,3 +1,3 @@
 class UMichwrapper
-  VERSION = "1.8.3"
+  VERSION = "0.1.0"
 end
