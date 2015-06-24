@@ -105,8 +105,8 @@ class UMichwrapper
       logger.info "Load config.  @env = #{@env}."
       default_file = File.expand_path("../config/umich.yml", File.dirname(__FILE__))
       app_file     = "#{app_root}/config/umich.yml"
-      fedora_file  = "#{app_root}/config/solr.yml"
-      solr_file    = "#{app_root}/config/fedora.yml"
+      fedora_file  = "#{app_root}/config/fedora.yml"
+      solr_file    = "#{app_root}/config/solr.yml"
 
       umich_file   = "#{app_root}/config/umich.yml"
 
@@ -126,8 +126,13 @@ class UMichwrapper
         end
       end
 
-      # Merge hashes overwritting with app_config where applicable 
+      # Merge default and app umich configs
+      #  overwritting with app_config where applicable 
       sum_config.merge! app_config, &merge_logic
+
+      # Add fedora and solr configs from matching config_name
+      sum_config[config_name]['solr_cfg']   = solr_config[config_name]
+      sum_config[config_name]['fedora_cfg'] = fedora_config[config_name]
 
       # Add the indifferent access magic from ActiveSupport.
       config = sum_config.with_indifferent_access
@@ -136,6 +141,7 @@ class UMichwrapper
 
 
     # Set the parameters for the instance.
+    # Parameters are loaded in precendence solr|fedora > umich > default
     # @note tupac represents the one and only wrapper instance.
     #
     # @return instance
@@ -147,33 +153,34 @@ class UMichwrapper
     #   :fedora_host
     #   :fedora_port
     #
-    #   :fedora_url the user specific url which will have test|dev appended.
-    #   :solr_admin_url   the user specific url which will have test|dev appended.
     def configure(params)
       params ||= {}
       tupac = self.instance
 
-      # Params for Solr
-      tupac.solr_admin_url = params[:solr_admin_url] || "localhost:8080/tomcat/quod-dev/solr-hydra"
-      tupac.solr_admin_url   = "#{tupac.solr_admin_url}/admin" 
-      tupac.solr_home = params[:solr_home] || "/quod-dev/idx/h/hydra-solr"
+      # Params Required for Solr
+      tupac.solr_admin_url   = params[:solr_admin_url] || "localhost:8080/tomcat/quod-dev/solr-hydra/admin"
+      tupac.solr_home        = params[:solr_home] || "/quod-dev/idx/h/hydra-solr"
 
-      # Params for Fedora
-      tupac.fedora_url = params[:fedora_url] || "localhost:8080/tomcat/quod-dev/fedora"
-      tupac.fedora_rest_url   = "#{tupac.fedora_url}/rest" 
+      # Params Required for Fedora
+      tupac.fedora_url       = params[:fedora_cfg][:url] || params[:fedora_url] || "localhost:8080/tomcat/quod-dev/fedora/rest"
+      tupac.fedora_rest_url  = "#{tupac.fedora_url}" 
 
       # Params without required defaults.
-      tupac.solr_core_name = params[:solr_core_name]
-      tupac.fedora_node_path = params[:fedora_node_path]
+      tupac.solr_core_name   = params[:solr_core_name]
+      tupac.fedora_node_path = params[:fedora_cfg][:base_path] || params[:fedora_node_path]
       
       return tupac
     end
 
     def print_status(params = {})
       tupac = configure( params )
-      puts "solr_admin_url: #{tupac.solr_admin_url}"
-      puts "solr running:   #{tupac.solr_running?|| 'false'}"
-      puts "fedora_url:     #{tupac.fedora_url}"
+      puts "-- Application --"
+      puts "solr_core_name:   #{tupac.solr_core_name}"
+      puts "fedora_base_node: #{tupac.fedora_node_path}"
+      puts "-- Service --"
+      puts "solr_admin_url:   #{tupac.solr_admin_url}"
+      puts "solr running:     #{tupac.solr_running? || 'false'}"
+      puts "fedora_url:       #{tupac.fedora_url}"
 
       puts "-- Solr Cores   --"
       tupac.core_status.each{|core, info| puts "#{info["instanceDir"]} :: #{core}"}
