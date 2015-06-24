@@ -7,8 +7,8 @@ namespace :umich do
     UMichwrapper.clean(UMICH_CONFIG)
   end
 
-  directory "dist"
-  directory "config"
+  # directory "dist"
+  # directory "config"
 
   desc "Load the umich environment from config."
   task :environment do
