@@ -23,7 +23,7 @@ Gem::Specification.new do |s|
   s.add_dependency "childprocess"
   s.add_dependency "i18n"
   s.add_dependency "activesupport", ">=3.0.0"
-  s.add_dependency 'rubyzip'
+  s.add_dependency 'rubyzip', "~> 1.0"
 
   s.add_development_dependency "rspec", '~> 3.2'
   s.add_development_dependency "rspec-its"
