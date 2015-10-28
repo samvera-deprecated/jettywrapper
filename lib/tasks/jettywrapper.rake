@@ -1,5 +1,6 @@
 ## These tasks get loaded into the host application when jettywrapper is required
 require 'yaml'
+require 'jettywrapper'
 
 namespace :jetty do
   JETTY_DIR = 'jetty'
