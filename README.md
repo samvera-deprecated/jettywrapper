@@ -1,5 +1,7 @@
 # Jettywrapper [![Version](https://badge.fury.io/gh/projecthydra%2Fjettywrapper.png)](http://badge.fury.io/gh/projecthydra%2Fjettywrapper) [![Build Status](https://travis-ci.org/projecthydra/jettywrapper.png?branch=master)](https://travis-ci.org/projecthydra/jettywrapper)
 
+NOTICE:  Because of changes introduced in Solr 5, we can no longer update jettywrapper to use modern versions of Solr. Therefore we discourage you from using jettywrapper in new projects.  No further development is anticipated for jettywrapper. Consider using [solr_wrapper](https://github.com/cbeer/solr_wrapper) and [fcrepo_wrapper](https://github.com/cbeer/fcrepo_wrapper) instead.
+
 This gem is designed to make it easier to integrate a jetty servlet container into a project with web service dependencies.  This can be especially useful for developing and testing projects requiring, for example, a Solr and/or a Fedora server.
 
 Jettywrapper provides rake tasks for starting and stopping jetty, as well as the method `Jettywrapper.wrap` that will start the server before the block and stop the server after the block, which is useful for automated testing.
