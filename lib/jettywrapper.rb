@@ -347,8 +347,8 @@ class Jettywrapper
         f.rewind
         err = f.read
 
-        java_version = if version = err.match(/java version "([^"]+)"/)
-          version[1]
+        java_version = if version = err.match(/(java|openjdk) version "([^"]+)"/)
+          version[2]
         else
           raise "Java not found, or an error was encountered when running `#{java_path} -version`: #{err}"
         end
