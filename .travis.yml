@@ -1,6 +1,5 @@
 sudo: false
 language: ruby
-
 matrix:
   include:
     - rvm: 2.1
@@ -13,7 +12,3 @@ matrix:
       gemfile: gemfiles/rails4.1.gemfile
     - rvm: jruby-19mode
       gemfile: gemfiles/rails4.2.gemfile
-
-notifications:
-  irc: "irc.freenode.org#projecthydra"
-
