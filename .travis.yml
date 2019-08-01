@@ -1,14 +1,16 @@
 sudo: false
 language: ruby
 matrix:
+  allow_failures:
+    - rvm: jruby-9.1.7.0
   include:
+    - rvm: 2.2
+      gemfile: gemfiles/rails5.2.gemfile
     - rvm: 2.1
       gemfile: gemfiles/rails4.1.gemfile
     - rvm: 2.1
       gemfile: gemfiles/rails4.2.gemfile
     - rvm: 2.0
       gemfile: gemfiles/rails4.2.gemfile
-    - rvm: 1.9.3
-      gemfile: gemfiles/rails4.1.gemfile
-    - rvm: jruby-19mode
+    - rvm: jruby-9.1.7.0
       gemfile: gemfiles/rails4.2.gemfile
